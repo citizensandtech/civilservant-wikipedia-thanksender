@@ -34,6 +34,7 @@ class ThanksSender:
         logging.info(f"Thanking batch size set to : {self.thank_batch_size}")
         self.db_session = init_session()
         self.lang = lang
+        logging.info(f"Thanking language set to. {self.lang}")
         self.consumer_token = mwoauth.ConsumerToken(
                                 os.environ['CS_OAUTH_CONSUMER_KEY'],
                                 os.environ['CS_OAUTH_CONSUMER_SECRET'])
@@ -164,15 +165,17 @@ class ThanksSender:
         self.db_session.commit()
 
     def run(self):
-            actions_needing = self.find_thanks_needing_send()
-            for action in actions_needing:
-                try:
-                    self.db_session.refresh(action)
-                    self.try_send_thanks(action)
-                    self.update_action_status(action)
-                except:
-                    self.db_session.rollback()
+        logging.info(f"Starting run at {datetime.datetime.utcnow()}")
+        actions_needing = self.find_thanks_needing_send()
+        for action in actions_needing:
+            try:
+                self.db_session.refresh(action)
+                self.try_send_thanks(action)
+                self.update_action_status(action)
+            except:
+                self.db_session.rollback()
+        logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 
 if __name__ == "__main__":
-    ts = ThanksSender(lang=None)
+    ts = ThanksSender(thank_batch_size=10, lang=None)
     ts.run()
