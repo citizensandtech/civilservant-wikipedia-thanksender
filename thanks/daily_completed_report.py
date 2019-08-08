@@ -1,6 +1,7 @@
 import datetime
 import os
 import time
+import codecs
 
 from sqlalchemy import and_, or_, func, desc
 import sqlalchemy
@@ -16,72 +17,112 @@ import pandas as pd
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
+from email.mime.application import MIMEApplication
+import email.encoders as encoders
 
 class EmailReport:
     """
-    mostly acts on the metadata_json field. Field data codes
-    - thanks_sent:
-       - key doesnt exist --> not yet tried or  have only been errors sending
-       - True --> successfully sent
-       - False --> cannot be sent for some reason
-    - errors:
-       - key doesn't exist --> not yet tried or success on first time
-       - list of dicts --> {dt: errorstr} #TODO if uncaught error have a dict that contains the stracktrace etc.
+    Note for usage on studies.civilservant.io. Use editsync's virtualenv
     """
 
     def __init__(self, lang=None):
-        logging.info(f"Thanking batch size set to : {self.thank_batch_size}")
         self.db_engine = init_engine()
         self.lang = lang
-        self.CSVDIR = os.getenv('CS_CSV_REPORT_DIR', "reports")
-        self.fname = f"gratitude_complet_report_{datetime.datetime.today().strftime('%Y%m%d')}"
-        self.outfile = os.path.join(self.CSVDIR, self.fname)
+        self.CSVDIR = os.getenv('CS_EMAIL_CSV_REPORT_DIR', "reports")
+        self.date = datetime.datetime.today().strftime('%Y%m%d')
+        self.subject = f"gratitude_completed_report_{self.date}"
+        self.fname_yesterday = f"{self.subject}.csv"
+        self.fname_thankee = f"thankee_completion_report_{self.date}.csv"
+        self.outfile_yesterday = os.path.join(self.CSVDIR, self.fname)
+        self.outfile_thankee = os.path.join(self.CSVDIR, self.fname)
+        self.fromaddr = os.getenv("CS_EMAIL_FROMADDR", 'system.operations@civilservant.io')
+        self.toaddrs = os.getenv("CS_EMAIL_TOADDRS", ['isalix@gmail.com']).split(',')
 
 
     def yesterdays_completers(self):
-        # now = datetime.datetime.utcnow()
-        # time_epsilon = datetime.timedelta(hours=1)
-        # yesterday = now - (datetime.timedelta(days=1) + time_epsilon)
-        # logging.info(f"Now is {now} . Yesterday with epsilon was {yesterday} .")
-        # date_cond = OAuthUser.modified_dt >= yesterday
-        # activity_completed = OAuthUser.metadata_json['role'] == 'activity'
-        # thank_completed = and_(OAuthUser.metadata_json['role'] == 'thank', OAuthUser.metadata_json['thanks_count'] >=4)
-        #
-        # yesterday_query = self.db_session.query(OAuthUser).filter(date_cond) \
-        #                       .filter(or_(activity_completed, thank_completed))
-        # return yesterday_query.all()
-        yesterday_sql = """select * from core_oauth_users
-                            where modified_dt > date_sub(curdate(), interval 25 hour)
-                              and (metadata_json->"$.role"='activity' or
-                                   metadata_json->"$.role"='thank' and metadata_json->"$.thanks_count" >= 4);
-                        """
+        yesterday_sql = """select lang, user_name, anonymized_id, condition_,
+                          max(action_created_dt) as most_recent_action, count(action) as num_actions
+                    
+                        from
+                          -- get recent experiment actions, decorated
+                          ((select json_unquote(ea.metadata_json->'$.lang') as lang, substring(ou.username,4) as user_name, json_unquote(ou.metadata_json->'$.role') as condition_,
+                                  ea.action as action, ea.created_dt as action_created_dt, ea.action_object_id thanked_rev, ea.action_key_id as eaaki,
+                                  json_unquote(et.metadata_json->"$.sync_object.anonymized_id") as anonymized_id
+                                      from core_experiment_actions as ea
+                                        join core_oauth_users as ou
+                                          on ea.action_key_id=ou.id
+                                        join core_experiment_things as et
+                                           on  concat("user_name:", ou.username) = et.id
+                                       where ea.created_dt >= date_sub(curdate(), interval 24 hour)
+                                             and ea.action in ('thank', 'complete_activity') ) recent_thanking
+                    
+                        join
+                          -- get the total number of actions
+                            (select action_key_id as eaaki
+                                  from core_experiment_actions where action in ('thank', 'complete_activity')
+                                  group by action_key_id) num_total_actions
+                        on recent_thanking.eaaki = num_total_actions.eaaki)
+                    
+                    
+                    group by lang, user_name, anonymized_id, condition_;
+
+                   """
         yesterday_df = pd.read_sql(yesterday_sql, self.db_engine)
-        yesterday_df.to_csv(self.outfile, index=False)
+        logging.info(f"found {len(yesterday_df)} completers")
+        yesterday_df.to_csv(self.outfile_yesterday, encoding='utf-8')
+        self.yesterday_html = yesterday_df.to_html()
+
+    def thankee_completion_status(self):
+        thankee_complete_sql = """"with  ea as (select json_unquote(metadata_json->"$.lang") as lang, json_unquote(metadata_json->"$.thanks_response.result.recipient") as user_name, metadata_json->"$.thanks_sent" as thanks_sent
+                                            from core_experiment_actions where action = 'thank' and metadata_json->"$.thanks_sent" = TRUE),
+                                         et as (select json_unquote(metadata_json->"$.sync_object.lang") as lang, json_unquote(metadata_json->"$.sync_object.user_name") as user_name,
+                                                  metadata_json->"$.sync_object.user_id" as user_id from core_experiment_things where experiment_id=-3),
+                                         ts as (select et.lang, et.user_name, ea.thanks_sent
+                                                    from  et left join ea on et.lang=ea.lang and et.user_name=ea.user_name)
+                                      select lang, ifnull(thanks_sent, "false") as thanks_sent, count(*) as num_thankees from
+                                          ts group by lang, thanks_sent order by lang, thanks_sent
+                                """
+        thankee_df = pd.read_sql(thankee_complete_sql, self.db_engine)
+        logging.info(f"found {thankee_df['num_thankees'].sum()} thankees")
+        thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
+        self.thankee_html = thankee_df.to_html()
 
 
-
-    def send_email(fromaddr, toaddrs, subject, html):
+    def send_email(self):
 
         COMMASPACE = ', '
+        email_subject = f"Daily Gratidude Activity Report for {self.date}"
 
         msg = MIMEMultipart()
-        msg['From'] = fromaddr
-        msg['To'] = COMMASPACE.join(toaddrs)
-        msg['Subject'] = subject
+        msg['From'] = self.fromaddr
+        msg['To'] = COMMASPACE.join(self.toaddrs)
+        msg['Subject'] = email_subject
 
-        body = html
-        msg.attach(MIMEText(body, 'html'))
+        doc_text_1 = f'''<h2>{email_subject}</h2>
+<p>This query represents all the users who have made Experiment Actions in the previous 24 hours, and their total number of actions ever.
+                         </p>'''
+        doc_text_2 = f'''<h2>thankee completion status</h2>
+<p>This query represents how many thankees have and have not had thanks sent to them.
+                         </p>'''
+        send_text = doc_text_1 + self.yesterday_html + doc_text_2 + self.thankee_html
+        msg.attach(MIMEText(send_text, 'html'))
+        for (outfile, fname) in [(self.outfile_yesterday, self.fname_yesterday), (self.outfile_thankee, self.fname_thankee)]:
+            with codecs.open(outfile, 'r', encoding='utf8') as f:
+                text = f.read()
+                part = MIMEText(text, 'csv', 'utf-8')
+                part['Content-Disposition'] = f'attachment; filename="{fname}"'
+                msg.attach(part)
 
         server = smtplib.SMTP('localhost', 25)
         text = msg.as_string()
-        server.sendmail(fromaddr, toaddrs, text)
+        server.sendmail(self.fromaddr, self.toaddrs, text)
         server.quit()
-        print("Sent email from {0} to {1} recipients".format(fromaddr, len(toaddrs)))
+        logging.info("Sent email from {0} to {1} recipients".format(self.fromaddr, self.toaddrs))
 
     def run(self):
-        completers = self.yesterdays_completers()
-        logging.info(f"found {len(completers) completers}")
+        self.yesterdays_completers()
+        self.send_email()
+        logging.info("Done running Email report")
 
 if __name__ == "__main__":
     er = EmailReport(lang='en')
