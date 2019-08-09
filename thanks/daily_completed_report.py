@@ -33,12 +33,14 @@ class EmailReport:
         self.subject = f"gratitude_completed_report_{self.date}"
         self.fname_yesterday = f"{self.subject}.csv"
         self.fname_thankee = f"thankee_completion_report_{self.date}.csv"
+        self.fname_candidates = f"thankee_candidates_report_{self.date}.csv"
         self.outfile_yesterday = os.path.join(self.CSVDIR, self.fname_yesterday)
         self.outfile_thankee = os.path.join(self.CSVDIR, self.fname_thankee)
+        self.outfile_candidates = os.path.join(self.CSVDIR, self.fname_candidates)
         self.fromaddr = os.getenv("CS_EMAIL_FROMADDR", 'system.operations@civilservant.io')
         self.toaddrs = os.getenv("CS_EMAIL_TOADDRS", ['isalix@gmail.com']).split(',')
 
-        
+
     def yesterdays_completers(self):
         yesterday_sql = """select lang, user_name, anonymized_id, condition_,
                           max(action_created_dt) as most_recent_action, count(action) as num_actions
@@ -71,7 +73,7 @@ class EmailReport:
         logging.info(f"found {len(yesterday_df)} completers")
         yesterday_df.to_csv(self.outfile_yesterday, encoding='utf-8')
         self.yesterday_html = yesterday_df.to_html()
-        
+
     def thankee_completion_status(self):
         thankee_complete_sql = """with  ea as (select json_unquote(metadata_json->"$.lang") as lang, json_unquote(metadata_json->"$.thanks_response.result.recipient") as user_name, metadata_json->"$.thanks_sent" as thanks_sent
                                             from core_experiment_actions where action = 'thank' and metadata_json->"$.thanks_sent" = TRUE),
@@ -79,13 +81,22 @@ class EmailReport:
                                                   metadata_json->"$.sync_object.user_id" as user_id from core_experiment_things where experiment_id=-3),
                                          ts as (select et.lang, et.user_name, ea.thanks_sent
                                                     from  et left join ea on et.lang=ea.lang and et.user_name=ea.user_name)
-                                      select lang, ifnull(thanks_sent, "false") as thanks_sent, count(*) as num_thankees from
+                                      select lang, ifnull(thanks_sent, "false") as thanks_sent, count(*) as num_thanks_sent from
                                           ts group by lang, thanks_sent order by lang, thanks_sent
                                 """
         thankee_df = pd.read_sql(thankee_complete_sql, self.db_engine)
         logging.info(f"found {thankee_df['num_thankees'].sum()} thankees")
         thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
         self.thankee_html = thankee_df.to_html()
+
+
+    def thankee_completion_candidates(self):
+        thankee_candidates_sql = """select lang, user_completed, count(*) from core_candidates group by lang, user_completed;
+                                 """
+        thankee_df = pd.read_sql(thankee_candidates_sql, self.db_engine)
+        logging.info(f"found {thankee_df['num_thankees'].sum()} thankees")
+        thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
+        self.thankee_candidates_html = thankee_df.to_html()
 
     def send_email(self):
 
@@ -100,11 +111,16 @@ class EmailReport:
 <p>This query represents all the users who have made Experiment Actions in the previous 24 hours, and their total number of actions ever.
                          </p>'''
         doc_text_2 = f'''<h2>thankee completion status</h2>
-<p>This query represents how many thankees have and have not had thanks sent to them.
+<p>This query represents how many thanks have been sent by by thankers (we thought it was the number of thankees, but a bug meant that until 2019.8.8 a thankee was being thanked multiple times).
                          </p>'''
-        send_text = doc_text_1 + self.yesterday_html + doc_text_2 + self.thankee_html
+        doc_text_3 = f'''<h2>thankee candidates status</h2>
+<p>This query represents how many thankees "candidates" have been marked as completed.
+                         </p>'''
+        send_text = doc_text_1 + self.yesterday_html + doc_text_2 + self.thankee_html + doc_text_3 + self.thankee_candidates_html
         msg.attach(MIMEText(send_text, 'html'))
-        for (outfile, fname) in [(self.outfile_yesterday, self.fname_yesterday), (self.outfile_thankee, self.fname_thankee)]:
+        for (outfile, fname) in [(self.outfile_yesterday, self.fname_yesterday),
+                                 (self.outfile_thankee, self.fname_thankee),
+                                 (self.outfile_candidates, self.fname_candidates)]:
             with codecs.open(outfile, 'r', encoding='utf8') as f:
                 text = f.read()
                 part = MIMEText(text, 'csv', 'utf-8')
@@ -120,6 +136,7 @@ class EmailReport:
     def run(self):
         self.yesterdays_completers()
         self.thankee_completion_status()
+        self.thankee_candidates_html()
         self.send_email()
         logging.info("Done running Email report")
 
