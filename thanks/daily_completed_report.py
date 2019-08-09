@@ -95,7 +95,7 @@ class EmailReport:
                                  """
         thankee_df = pd.read_sql(thankee_candidates_sql, self.db_engine)
         logging.info(f"found {thankee_df['thankee_candidates'].sum()} thankee candidates ")
-        thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
+        thankee_df.to_csv(self.outfile_candidates, encoding='utf-8')
         self.thankee_candidates_html = thankee_df.to_html()
 
     def send_email(self):
