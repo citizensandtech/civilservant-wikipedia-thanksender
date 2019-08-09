@@ -136,7 +136,7 @@ class EmailReport:
     def run(self):
         self.yesterdays_completers()
         self.thankee_completion_status()
-        self.thankee_candidates_html()
+        self.thankee_completion_candidates()
         self.send_email()
         logging.info("Done running Email report")
 
