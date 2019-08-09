@@ -91,10 +91,10 @@ class EmailReport:
 
 
     def thankee_completion_candidates(self):
-        thankee_candidates_sql = """select lang, user_completed, count(*) from core_candidates group by lang, user_completed;
+        thankee_candidates_sql = """select lang, user_completed, count(*) as thankee_candidates from core_candidates group by lang, user_completed;
                                  """
         thankee_df = pd.read_sql(thankee_candidates_sql, self.db_engine)
-        logging.info(f"found {thankee_df['num_thankees'].sum()} thankees")
+        logging.info(f"found {thankee_df['thankee_candidates'].sum()} thankee candidates ")
         thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
         self.thankee_candidates_html = thankee_df.to_html()
 
@@ -110,7 +110,7 @@ class EmailReport:
         doc_text_1 = f'''<h2>{email_subject}</h2>
 <p>This query represents all the users who have made Experiment Actions in the previous 24 hours, and their total number of actions ever.
                          </p>'''
-        doc_text_2 = f'''<h2>thankee completion status</h2>
+        doc_text_2 = f'''<h2>thanker actions status</h2>
 <p>This query represents how many thanks have been sent by by thankers (we thought it was the number of thankees, but a bug meant that until 2019.8.8 a thankee was being thanked multiple times).
                          </p>'''
         doc_text_3 = f'''<h2>thankee candidates status</h2>
