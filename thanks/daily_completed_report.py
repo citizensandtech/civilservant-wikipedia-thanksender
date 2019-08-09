@@ -85,7 +85,7 @@ class EmailReport:
                                           ts group by lang, thanks_sent order by lang, thanks_sent
                                 """
         thankee_df = pd.read_sql(thankee_complete_sql, self.db_engine)
-        logging.info(f"found {thankee_df['num_thankees'].sum()} thankees")
+        logging.info(f"found {thankee_df['num_thanks_sent'].sum()} thankees")
         thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
         self.thankee_html = thankee_df.to_html()
 
