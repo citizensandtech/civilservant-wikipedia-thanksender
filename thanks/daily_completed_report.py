@@ -165,6 +165,7 @@ class EmailReport:
         self.yesterdays_completers()
         self.thankee_completion_status()
         self.thankee_completion_candidates()
+        self.superthanker_thanks()
         self.send_email()
         logging.info("Done running Email report")
 
