@@ -34,9 +34,11 @@ class EmailReport:
         self.fname_yesterday = f"{self.subject}.csv"
         self.fname_thankee = f"thankee_completion_report_{self.date}.csv"
         self.fname_candidates = f"thankee_candidates_report_{self.date}.csv"
+        self.fname_superthankers = f"superthankers_report_{self.date}.csv"
         self.outfile_yesterday = os.path.join(self.CSVDIR, self.fname_yesterday)
         self.outfile_thankee = os.path.join(self.CSVDIR, self.fname_thankee)
         self.outfile_candidates = os.path.join(self.CSVDIR, self.fname_candidates)
+        self.outfile_superthankers = os.path.join(self.CSVDIR, self.fname_superthankers)
         self.fromaddr = os.getenv("CS_EMAIL_FROMADDR", 'system.operations@civilservant.io')
         self.toaddrs = os.getenv("CS_EMAIL_TOADDRS", ['isalix@gmail.com']).split(',')
 
@@ -98,6 +100,24 @@ class EmailReport:
         thankee_df.to_csv(self.outfile_candidates, encoding='utf-8')
         self.thankee_candidates_html = thankee_df.to_html()
 
+    def superthanker_thanks(self):
+        superthanker_sql = """with superthanker_thanks as
+                                  (select a.action_key_id , o.username, json_unquote(e.metadata_json->'$.sync_object.lang') as lang, json_unquote(e.metadata_json->'$.sync_object.user_name') as user_name, 1 as superthanker
+                                    from core_experiment_things e
+                                    join core_oauth_users o
+                                       on o.username = concat(json_unquote(e.metadata_json->'$.sync_object.lang'), ':' ,json_unquote(e.metadata_json->'$.sync_object.user_name'))
+                                    join core_experiment_actions a
+                                      on a.action_key_id = o.id
+                                  where e.experiment_id=-1 and e.randomization_condition='superthanker' and a.action='thank')
+                                
+                                select count(*) as num_thanks_sent, lang, user_name
+                                  from superthanker_thanks
+                                  group by lang, user_name
+                                  order by lang, count(*) desc"""
+        superthanker_df = pd.read_sql(superthanker_sql, self.db_engine)
+        superthanker_df.to_csv(self.outfile_superthankers, encoding='utf-8')
+        self.superthanker_thanks_html = superthanker_df.to_html()
+
     def send_email(self):
 
         COMMASPACE = ', '
@@ -116,10 +136,18 @@ class EmailReport:
         doc_text_3 = f'''<h2>thankee candidates status</h2>
 <p>This query represents how many thankees "candidates" have been marked as completed.
                          </p>'''
-        send_text = doc_text_1 + self.yesterday_html + doc_text_2 + self.thankee_html + doc_text_3 + self.thankee_candidates_html
+        doc_text_4 = f'''<h2>Superthankers thanks given status</h2>
+<p>This query represents how many thanks each superthanker has sent.
+                         </p>'''
+        send_text = doc_text_1 + self.yesterday_html + \
+                    doc_text_2 + self.thankee_html + \
+                    doc_text_3 + self.thankee_candidates_html + \
+                    doc_text_4 + self.superthanker_thanks_html
         msg.attach(MIMEText(send_text, 'html'))
+
         for (outfile, fname) in [(self.outfile_yesterday, self.fname_yesterday),
                                  (self.outfile_thankee, self.fname_thankee),
+                                 (self.outfile_superthankers, self.fname_superthankers),
                                  (self.outfile_candidates, self.fname_candidates)]:
             with codecs.open(outfile, 'r', encoding='utf8') as f:
                 text = f.read()
