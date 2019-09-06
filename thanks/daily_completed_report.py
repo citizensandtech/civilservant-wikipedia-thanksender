@@ -80,7 +80,7 @@ class EmailReport:
         thankee_complete_sql = """with  ea as (select json_unquote(metadata_json->"$.lang") as lang, json_unquote(metadata_json->"$.thanks_response.result.recipient") as user_name, metadata_json->"$.thanks_sent" as thanks_sent
                                             from core_experiment_actions where action = 'thank' and metadata_json->"$.thanks_sent" = TRUE),
                                          et as (select json_unquote(metadata_json->"$.sync_object.lang") as lang, json_unquote(metadata_json->"$.sync_object.user_name") as user_name,
-                                                  metadata_json->"$.sync_object.user_id" as user_id from core_experiment_things where experiment_id=-3),
+                                                  metadata_json->"$.sync_object.user_id" as user_id from core_experiment_things where experiment_id=-3 and removed_dt is NULL),
                                          ts as (select et.lang, et.user_name, ea.thanks_sent
                                                     from  et left join ea on et.lang=ea.lang and et.user_name=ea.user_name)
                                       select lang, ifnull(thanks_sent, "false") as thanks_sent, count(*) as num_thanks_sent from
