@@ -166,5 +166,5 @@ class ExperimentActionController(object):
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 
 if __name__ == "__main__":
-    ts = ExperimentActionController(batch_size=10, max_send_errors=10, lang=None)
-    ts.run()
+    eac = ExperimentActionController(batch_size=10, max_send_errors=10, lang=None)
+    eac.run()
