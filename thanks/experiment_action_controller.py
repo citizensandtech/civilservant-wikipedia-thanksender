@@ -38,7 +38,8 @@ class ExperimentActionController(object):
        - list of dicts --> {dt: errorstr} #TODO if uncaught error have a dict that contains the stracktrace etc.
     """
 
-    def __init__(self, batch_size, max_send_errors, lang):
+    def __init__(self, batch_size=5, max_send_errors=5, lang=None, dry_run=True, enable_create_actions=True,
+                 enable_execute_actions=True):
         self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', batch_size))
         logging.info(f"Survey batch size set to : {self.batch_size}")
         self.db_session = init_session()
@@ -51,6 +52,9 @@ class ExperimentActionController(object):
         self.intervention_type = os.environ['CS_WIKIPEDIA_INTERVENTION_TYPE']
         self.intervention_name = os.environ['CS_WIKIPEDIA_INTERVENTION_NAME']
         self.api_con = None # a slot for a connection or session to keep open between different phases.
+        self.dry_run = dry_run
+        self.enable_create_actions = enable_create_actions
+        self.enable_execute_actions = enable_execute_actions
 
     def create_new_actions(self):
         """
@@ -155,16 +159,17 @@ class ExperimentActionController(object):
     def run(self):
         logging.info(f"Starting run at {datetime.datetime.utcnow()}")
 
-        new_actions = self.create_new_actions()
-        if new_actions:
+        if self.enable_create_actions:
+            new_actions = self.create_new_actions()
             logging.info(f'New actions created: {len(new_actions)}')
 
-        incomplete_actions = self.find_incomplete_actions()
+        if self.enable_execute_actions:
+            incomplete_actions = self.find_incomplete_actions()
+            action_successes = self.execute_actions(incomplete_actions)
+            logging.info(f'Action sucesses were: {action_successes}')
 
-        action_successes = self.execute_actions(incomplete_actions)
-        logging.info(f'Action sucesses were: {action_successes}')
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 
 if __name__ == "__main__":
-    eac = ExperimentActionController(batch_size=10, max_send_errors=10, lang=None)
+    eac = ExperimentActionController(batch_size=10, max_send_errors=10, lang=None, dry_run=True)
     eac.run()
