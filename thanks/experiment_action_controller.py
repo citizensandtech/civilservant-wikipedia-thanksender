@@ -8,15 +8,16 @@ import mwoauth as mwoauth
 from requests_oauthlib import OAuth1
 from sqlalchemy import and_, or_, func, desc
 import sqlalchemy
-import civilservant.logs
 from civilservant.util import PlatformType, ThingType
 from thanks.utils import update_action_status, MaxInterventionAttemptsExceededError
 
+import civilservant.logs
 civilservant.logs.initialize()
 import logging
 from civilservant.db import init_session
 from civilservant.models.core import ExperimentAction, OAuthUser, ExperimentThing
 from thanks.action_creating import create_actions
+from thanks.action_intervening import attempt_action
 
 
 
@@ -49,6 +50,7 @@ class ExperimentActionController(object):
         self.max_send_errors = int(os.getenv('CS_OAUTH_THANKS_MAX_SEND_ERRORS', max_send_errors))
         self.intervention_type = os.environ['CS_WIKIPEDIA_INTERVENTION_TYPE']
         self.intervention_name = os.environ['CS_WIKIPEDIA_INTERVENTION_NAME']
+        self.api_con = None # a slot for a connection or session to keep open between different phases.
 
     def create_new_actions(self):
         """
@@ -57,7 +59,7 @@ class ExperimentActionController(object):
         Other times the action needs to be created by ourselves (like sending out a survey).
         :return: list of experimentActions or None if there are no actions to be created
         """
-        return create_actions(db=self.db_session, logging=logging,
+        return create_actions(db=self.db_session,
                               batch_size=self.batch_size, lang=self.lang,
                               intervention_name=self.intervention_name,
                               intervention_type=self.intervention_type)
@@ -85,6 +87,7 @@ class ExperimentActionController(object):
                             .limit(self.batch_size) \
                             .all()
 
+        logging.debug(incomplete_actions_q)
         logging.info(f"Found {len(incomplete_actions)} thanks needing sending. lang is {self.lang}")
         return incomplete_actions
 
@@ -110,8 +113,8 @@ class ExperimentActionController(object):
         """
         States that survey Experiment acitons ought to be in: by metadata_json dict.
         1. Never attempted --> no such key
-        2. Sucessful --> "survey_sent"=true
-        3. Error ---> "survey_sent"=false "errors":["list of error dicts"]
+        2. Sucessful --> "action_complete"=true
+        3. Error ---> "action_complete"=false "errors":["list of error dicts"]
         :return: count of survey sent
         """
         if not experiment_action.metadata_json:
@@ -121,9 +124,12 @@ class ExperimentActionController(object):
 
         try:
             # send thanks
-            thank_response = self.actually_post_thanks(experiment_action)
-            experiment_action.metadata_json['action_complete'] = True
-            experiment_action.metadata_json['action_response'] = thank_response
+            action_complete, action_response = attempt_action(action=experiment_action,
+                                             intervention_name=self.intervention_name,
+                                             intervention_type=self.intervention_type,
+                                             api_con=self.api_con)
+            experiment_action.metadata_json['action_complete'] = action_complete
+            experiment_action.metadata_json['action_response'] = action_response
             experiment_action.metadata_json['errors'] = prev_errors
         except Exception as e:
             # network error
@@ -158,9 +164,6 @@ class ExperimentActionController(object):
         action_successes = self.execute_actions(incomplete_actions)
         logging.info(f'Action sucesses were: {action_successes}')
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
-
-
-
 
 if __name__ == "__main__":
     ts = ExperimentActionController(batch_size=10, max_send_errors=10, lang=None)

@@ -4,17 +4,25 @@ import sqlalchemy
 
 from civilservant.models.core import ExperimentAction, ExperimentThing
 from civilservant.util import PlatformType, ThingType
+import civilservant.logs
+civilservant.logs.initialize()
+import logging
+
 from sqlalchemy import and_, desc, or_
 from sqlalchemy.orm import aliased
 
+from uuid import uuid4
 
-def create_actions_thankees_needing_survey(db, logging, batch_size, lang, intervention_name, intervention_type):
+
+
+def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_name, intervention_type):
     """
      process: find all survey that are:
      0. have been thanked more than 42 days ago
      1. filter out the user who have already been surveyed
      2. get the matching pairs based on block id.
-     3. create experimentActions for surveysend
+     3. create experimentActions for surveysend. make the metadata_json field contain the keys you want the survey templates
+        to be filled with
     """
     survey_after_days = int(os.environ['CS_WIKIPEDIA_SURVEY_AFTER_DAYS'])
     now = datetime.datetime.utcnow()
@@ -102,7 +110,9 @@ def create_actions_thankees_needing_survey(db, logging, batch_size, lang, interv
                                      action_platform=PlatformType.WIKIPEDIA,
                                      action_key_id=None,
                                      action=intervention_type,
-                                     metadata_json={"lang": expThing.metadata_json['sync_object']['lang']})
+                                     metadata_json={"lang": expThing.metadata_json['sync_object']['lang'],
+                                                    "anonymized_id": str(uuid4()),
+                                                    "user_name":expThing.metadata_json['sync_object']['user_name']})
         thankees_needing_survey_experiment_actions.append(survey_ea)
 
     db.add_all(thankees_needing_survey_experiment_actions)
@@ -111,7 +121,7 @@ def create_actions_thankees_needing_survey(db, logging, batch_size, lang, interv
     return thankees_needing_survey_experiment_actions
 
 
-def create_actions(db, logging, batch_size, lang, intervention_name, intervention_type):
+def create_actions(db, batch_size, lang, intervention_name, intervention_type):
     """
     :param db: database connection
     :param logging: logger
@@ -124,7 +134,7 @@ def create_actions(db, logging, batch_size, lang, intervention_name, interventio
     intervention_name_fn = {'gratitude_thankee_survey': create_actions_thankees_needing_survey}
 
     try:
-        return intervention_name_fn[intervention_name](db, logging, batch_size, lang, intervention_name,
+        return intervention_name_fn[intervention_name](db, batch_size, lang, intervention_name,
                                                        intervention_type)
     except KeyError:
         logging.info(f'No logic defined for intervention: {intervention_name}')
