@@ -38,9 +38,9 @@ class ExperimentActionController(object):
        - list of dicts --> {dt: errorstr} #TODO if uncaught error have a dict that contains the stracktrace etc.
     """
 
-    def __init__(self, batch_size=5, max_send_errors=5, lang=None, dry_run=True, enable_create_actions=True,
+    def __init__(self, lang=None, dry_run=True, enable_create_actions=True,
                  enable_execute_actions=True):
-        self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', batch_size))
+        self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', 2))
         logging.info(f"Survey batch size set to : {self.batch_size}")
         self.db_session = init_session()
         self.lang = lang
@@ -48,7 +48,7 @@ class ExperimentActionController(object):
         self.consumer_token = mwoauth.ConsumerToken(
             os.environ['CS_OAUTH_CONSUMER_KEY'],
             os.environ['CS_OAUTH_CONSUMER_SECRET'])
-        self.max_send_errors = int(os.getenv('CS_OAUTH_THANKS_MAX_SEND_ERRORS', max_send_errors))
+        self.max_send_errors = int(os.getenv('CS_OAUTH_THANKS_MAX_SEND_ERRORS', 5))
         self.intervention_type = os.environ['CS_WIKIPEDIA_INTERVENTION_TYPE']
         self.intervention_name = os.environ['CS_WIKIPEDIA_INTERVENTION_NAME']
         self.api_con = None # a slot for a connection or session to keep open between different phases.
@@ -171,5 +171,5 @@ class ExperimentActionController(object):
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 
 if __name__ == "__main__":
-    eac = ExperimentActionController(batch_size=10, max_send_errors=10, lang=None, dry_run=True)
+    eac = ExperimentActionController(lang=None, dry_run=True)
     eac.run()
