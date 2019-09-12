@@ -27,7 +27,7 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
     survey_after_days = int(os.environ['CS_WIKIPEDIA_SURVEY_AFTER_DAYS'])
     now = datetime.datetime.utcnow()
     thanks_latest_date = now - datetime.timedelta(days=survey_after_days)
-
+    logging.info(f'Seeking thankees who received thanks before {thanks_latest_date}')
     ExperimentActionSurvey = aliased(ExperimentAction)
 
     received_thanks_onclause = and_(ExperimentAction.metadata_json['thanks_response']['result']['recipient'] == \
@@ -86,8 +86,8 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
             continue
 
     # trim out list down to batch size
-    thankees_needing_survey_experiment_action = thankees_needing_survey_experiment_action[:batch_size]
-    logging.info(f'There are {len(thankees_needing_survey_experiment_action)} unique thankees needing survey')
+    # thankees_needing_survey_experiment_action = thankees_needing_survey_experiment_action[:batch_size]
+    # logging.info(f'There are {len(thankees_needing_survey_experiment_action)} unique thankees needing survey')
 
     # get the matching pairs based on the block.
     thankees_and_control_needing_survey_experiment_action = []
