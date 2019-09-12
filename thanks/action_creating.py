@@ -44,7 +44,8 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
     thanks_sent_qualify = and_(ExperimentAction.experiment_id == -1,
                                ExperimentAction.action == 'thank',
                                ExperimentAction.created_dt < thanks_latest_date,
-                               ExperimentAction.metadata_json['thanks_sent'] != None)
+                               ExperimentAction.metadata_json['thanks_sent'] != None,
+                               ExperimentAction.metadata_json['lang'] != 'en')
 
     relevant_surveys = or_(ExperimentActionSurvey.action_subject_id == intervention_name,
                            ExperimentActionSurvey.action_subject_id == None)
