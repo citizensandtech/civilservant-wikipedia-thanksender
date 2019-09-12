@@ -47,8 +47,8 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
                                ExperimentAction.metadata_json['thanks_sent'] != None,
                                ExperimentAction.metadata_json['lang'] != 'en')
 
-    relevant_surveys = or_(ExperimentActionSurvey.action_subject_id == intervention_name,
-                           ExperimentActionSurvey.action_subject_id == None)
+    relevant_surveys = and_(ExperimentActionSurvey.action_subject_id == intervention_name,
+                            ExperimentActionSurvey.action == intervention_type)
 
     # the first join is to get
     thanked_thankees_p = db.query(ExperimentAction, ExperimentThing, ExperimentActionSurvey) \
@@ -72,7 +72,8 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
                                     in thanked_thankees if expActionSurvey]
     logging.info(f'There are {len(thanked_thankees_needing_survey)} experimentActions with thanks but without survey')
     logging.info(f'There are {len(thanked_thankees_with_survey)} experimentActions with thanks and with survey')
-
+    for th in thanked_thankees_with_survey:
+        logging.debug(f'thanked_thankee_with_survey: {th[0].id, th[1].id, th[2].id}')
     # make sure the thankees are unique to avoid sending messages
     thankees_needing_survey_experiment_action = []
     seen_thankees = set()
