@@ -96,22 +96,22 @@ class ExperimentActionController(object):
         return incomplete_actions
 
     def execute_actions(self, incomplete_actions):
-        action_successes = []
+        action_fatalities = []
         for action in incomplete_actions:
             try:
                 self.db_session.refresh(action)
                 self.intervene_once(action)
                 update_action_status(self.db_session, logging, action)
-                action_successes.append(True)
+                action_fatalities.append(False)
             except MaxInterventionAttemptsExceededError:
                 logging.error(f"Found a MaxInterventionAttemptsExceededError expAction id={action.id}")
                 update_action_status(self.db_session, logging, action)
-                action_successes.append(False)
+                action_fatalities.append(True)
             except Exception as e:
                 logging.error(f"Outer loop is catching {e}")
-                action_successes.append(False)
+                action_fatalities.append(True)
                 self.db_session.rollback()
-        return action_successes
+        return action_fatalities
 
     def intervene_once(self, experiment_action):
         """
@@ -131,7 +131,7 @@ class ExperimentActionController(object):
             action_complete, action_response = attempt_action(action=experiment_action,
                                              intervention_name=self.intervention_name,
                                              intervention_type=self.intervention_type,
-                                             api_con=self.api_con)
+                                             api_con=self.api_con, dry_run=self.dry_run)
             experiment_action.metadata_json['action_complete'] = action_complete
             experiment_action.metadata_json['action_response'] = action_response
             experiment_action.metadata_json['errors'] = prev_errors
@@ -165,8 +165,8 @@ class ExperimentActionController(object):
 
         if self.enable_execute_actions:
             incomplete_actions = self.find_incomplete_actions()
-            action_successes = self.execute_actions(incomplete_actions)
-            logging.info(f'Action sucesses were: {action_successes}')
+            action_fatalities = self.execute_actions(incomplete_actions)
+            logging.info(f'Action sucesses were: {action_fatalities}')
 
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 

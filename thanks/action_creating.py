@@ -50,10 +50,12 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
                            ExperimentActionSurvey.action_subject_id == None)
 
     # the first join is to get
-    thanked_thankees_q = db.query(ExperimentAction, ExperimentThing, ExperimentActionSurvey) \
+    thanked_thankees_p = db.query(ExperimentAction, ExperimentThing, ExperimentActionSurvey) \
         .join(ExperimentThing, received_thanks_onclause) \
+        .filter(thanks_sent_qualify)
+
+    thanked_thankees_q = thanked_thankees_p \
         .outerjoin(ExperimentActionSurvey, survey_sent_onclause) \
-        .filter(thanks_sent_qualify) \
         .filter(relevant_surveys)
 
     if lang:
@@ -90,13 +92,17 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
     thankees_and_control_needing_survey_experiment_action = []
     for (expActionThank, expThing, expActionSurvey) in thankees_needing_survey_experiment_action:
         block_id = expThing.metadata_json["randomization_block_id"]
+        block_lang = expThing.metadata_json["sync_object"]["lang"]
         logging.debug(f'Thankee {expThing.id} has block_id {block_id}')
         try:
             block_partner = db.query(ExperimentThing) \
                 .filter(ExperimentThing.metadata_json['randomization_block_id'] == block_id,
-                        ExperimentThing.randomization_arm == 0).one()
+                        ExperimentThing.randomization_arm == 0,
+                        ExperimentThing.metadata_json['sync_object']['lang']==block_lang).one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(f"Cannot find matching pair for thankee {expThing.metadata_json}")
+        except sqlalchemy.orm.exc.MultipleResultsFound:
+            raise ValueError(f"Multiple results found for block partner for {expThing.id}")
         thankees_and_control_needing_survey_experiment_action.append(expThing)
         thankees_and_control_needing_survey_experiment_action.append(block_partner)
 
@@ -137,5 +143,5 @@ def create_actions(db, batch_size, lang, intervention_name, intervention_type):
         return intervention_name_fn[intervention_name](db, batch_size, lang, intervention_name,
                                                        intervention_type)
     except KeyError:
-        logging.info(f'No logic defined for intervention: {intervention_name}')
+        logging.info(f'No creation logic defined for intervention: {intervention_name}')
         return None
