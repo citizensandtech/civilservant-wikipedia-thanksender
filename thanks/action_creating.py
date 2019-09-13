@@ -267,8 +267,9 @@ def create_actions(db, batch_size, lang, intervention_name, intervention_type):
     intervention_name_fn = {'gratitude_thankee_survey': create_actions_thankees_needing_survey_fast}
 
     try:
-        return intervention_name_fn[intervention_name](db, batch_size, lang, intervention_name,
-                                                       intervention_type)
+        creation_fn = intervention_name_fn[intervention_name]
     except KeyError as e:
         logging.info(f'No creation logic defined for intervention: {intervention_name}, error was {e}')
         return None
+    return creation_fn(db, batch_size, lang, intervention_name,
+                    intervention_type)
