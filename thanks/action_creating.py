@@ -144,12 +144,13 @@ def create_actions_thankees_needing_survey_fast(db, batch_size, lang, interventi
     now = datetime.datetime.utcnow()
     thanks_latest_date = now - datetime.timedelta(days=survey_after_days)
 
-    thanked_thankees = get_thanked_thankees(db, thanks_latest_date, intervention_type, intervention_name)
+    early_enough, sent_surveys = get_thanked_thankees(db, thanks_latest_date, intervention_type, intervention_name)
 
-    thanked_thankees_without_survey = thankees_have_survey(thanked_thankees, without=True)
-    thanked_thankees_with_survey = thankees_have_survey(thanked_thankees, without=False)
+    thanked_thankees_without_survey, thanked_thankees_with_survey = thankees_having_survey(early_enough, sent_surveys)
 
-    logging.info(f'There are {len(thanked_thankees)} experimentActions meeting date criteria')
+    assert len(thanked_thankees_without_survey) + len(thanked_thankees_with_survey) == len(early_enough)
+
+    logging.info(f'There are {len(early_enough)} experimentActions meeting date criteria')
     logging.info(f'There are {len(thanked_thankees_without_survey)} experimentActions with thanks but without survey')
     logging.info(f'There are {len(thanked_thankees_with_survey)} experimentActions with thanks and with survey')
 
@@ -209,8 +210,6 @@ def make_experiment_actions(db, thankees_and_control, intervention_name, interve
 
 
 def uniqueify_thanked_thankees(thanked_thankees):
-    for (e, f) in thanked_thankees:
-        logging.debug(f'uniq, {e.id}||{e.metadata_json}, {f.id}|||{f.metadata_json}')
     thankee_ids_all = [
         (expAction.metadata_json['lang'], expAction.metadata_json['thanks_response']['result']['recipient']) for
         (expAction, expActionSurvey) in thanked_thankees]
@@ -233,7 +232,7 @@ def get_thanked_thankees(db, thanks_latest_date, intervention_type, intervention
     thanks_sent_qualify = and_(ExperimentAction.experiment_id == -1,
                                ExperimentAction.action == 'thank',
                                ExperimentAction.created_dt < thanks_latest_date,
-                               ExperimentAction.metadata_json['thanks_sent'] != None,
+                               ExperimentAction.metadata_json['thanks_sent'] == True,
                                ExperimentAction.metadata_json['lang'] != 'en')
 
     relevant_surveys = or_(and_(ExperimentActionSurvey.action_subject_id == intervention_name,
@@ -241,20 +240,35 @@ def get_thanked_thankees(db, thanks_latest_date, intervention_type, intervention
                            and_(ExperimentActionSurvey.action_subject_id == None,
                                 ExperimentActionSurvey.action == None))
 
-    thanked_thankees = db.query(ExperimentAction, ExperimentActionSurvey).outerjoin(ExperimentActionSurvey,
-                                                                                    survey_sent_onclause) \
-        .filter(thanks_sent_qualify).filter(relevant_surveys) \
-        .order_by(desc(ExperimentAction.created_dt)).all()
+    early_enough = db.query(ExperimentAction).filter(thanks_sent_qualify).order_by(
+        desc(ExperimentAction.created_dt)).all()
 
-    return thanked_thankees
+    sent_surveys = db.query(ExperimentActionSurvey).filter(relevant_surveys).all()
+
+    return early_enough, sent_surveys
 
 
-def thankees_have_survey(thanked_thankees, without):
-    op = (lambda x: x is None) if without else (lambda x: x is not None)
-    return [(expActionThank, expActionSurvey) for
-            (expActionThank, expActionSurvey)
-            in thanked_thankees if op(expActionSurvey)]
+def thankees_having_survey(early_enough, sent_surveys):
+    thanked_thankees_without_survey = []
+    thanked_thankees_with_survey = []
 
+    # stupid double-loop algo instead of left outer join, fml
+    for expAction in early_enough:
+        ea_lang, ea_user_name = expAction.metadata_json['lang'], expAction.metadata_json['thanks_response']['result'][
+            'recipient']
+        found = False
+        for expActionSurv in sent_surveys:
+            eas_lang, eas_user_name = expActionSurv.metadata_json['lang'], expActionSurv.action_object_id
+            if (ea_lang == eas_lang) and (ea_user_name == eas_user_name):
+                # match
+                found = expActionSurv
+        # ive now search through all the surveys
+        if found:
+            thanked_thankees_with_survey.append((expAction, found))
+        else:
+            thanked_thankees_without_survey.append((expAction, None))
+
+    return thanked_thankees_without_survey, thanked_thankees_with_survey
 
 def create_actions(db, batch_size, lang, intervention_name, intervention_type):
     """
@@ -274,4 +288,4 @@ def create_actions(db, batch_size, lang, intervention_name, intervention_type):
         logging.info(f'No creation logic defined for intervention: {intervention_name}, error was {e}')
         return None
     return creation_fn(db, batch_size, lang, intervention_name,
-                    intervention_type)
+                       intervention_type)
