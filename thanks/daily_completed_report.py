@@ -14,6 +14,8 @@ from civilservant.db import init_engine
 from civilservant.models.core import OAuthUser
 import pandas as pd
 
+pd.set_option('display.max_colwidth', 1000)
+
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
