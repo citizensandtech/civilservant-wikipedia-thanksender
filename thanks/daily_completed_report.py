@@ -158,7 +158,7 @@ from core_experiment_actions ea
 <p>This query represents how many thanks each superthanker has sent.
                          </p>'''
         doc_text_5 = f'''<h2>Yesterday's survey recipients</h2>
-<p>This query represents who received surveys yesterday.
+<p>This query represents who received surveys yesterday. Users without links represent users inteded to but not surveyed yet.
                          </p>'''
         send_text = doc_text_1 + self.yesterday_html + \
                     doc_text_2 + self.thankee_html + \
