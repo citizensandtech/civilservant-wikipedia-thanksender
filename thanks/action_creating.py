@@ -269,6 +269,6 @@ def create_actions(db, batch_size, lang, intervention_name, intervention_type):
     try:
         return intervention_name_fn[intervention_name](db, batch_size, lang, intervention_name,
                                                        intervention_type)
-    except KeyError:
-        logging.info(f'No creation logic defined for intervention: {intervention_name}')
+    except KeyError as e:
+        logging.info(f'No creation logic defined for intervention: {intervention_name}, error was {e}')
         return None
