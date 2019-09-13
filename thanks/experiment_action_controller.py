@@ -166,7 +166,7 @@ class ExperimentActionController(object):
         if self.enable_execute_actions:
             incomplete_actions = self.find_incomplete_actions()
             action_fatalities = self.execute_actions(incomplete_actions)
-            logging.info(f'Action sucesses were: {action_fatalities}')
+            logging.info(f'Action fatalities were: {action_fatalities}')
 
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 

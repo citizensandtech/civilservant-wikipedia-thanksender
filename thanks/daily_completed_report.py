@@ -35,10 +35,12 @@ class EmailReport:
         self.fname_thankee = f"thankee_completion_report_{self.date}.csv"
         self.fname_candidates = f"thankee_candidates_report_{self.date}.csv"
         self.fname_superthankers = f"superthankers_report_{self.date}.csv"
+        self.fname_survey_recips = f"superthankers_report_{self.date}.csv"
         self.outfile_yesterday = os.path.join(self.CSVDIR, self.fname_yesterday)
         self.outfile_thankee = os.path.join(self.CSVDIR, self.fname_thankee)
         self.outfile_candidates = os.path.join(self.CSVDIR, self.fname_candidates)
         self.outfile_superthankers = os.path.join(self.CSVDIR, self.fname_superthankers)
+        self.outfile_survey_recips = os.path.join(self.CSVDIR, self.fname_survey_recips)
         self.fromaddr = os.getenv("CS_EMAIL_FROMADDR", 'system.operations@civilservant.io')
         self.toaddrs = os.getenv("CS_EMAIL_TOADDRS", ['isalix@gmail.com']).split(',')
 
@@ -118,6 +120,22 @@ class EmailReport:
         superthanker_df.to_csv(self.outfile_superthankers, encoding='utf-8')
         self.superthanker_thanks_html = superthanker_df.to_html()
 
+    def survey_recipients(self):
+        survey_recip_sql="""-- the users that were surveyed recently
+                                select ea.metadata_json->'$.lang' as lang, ea.action_object_id as user_name,
+                                  eab.created_dt as thanked_date,
+                                  concat('https://',json_unquote(ea.metadata_json->'$.lang'),'.wikipedia.org/wiki',json_unquote(ea.metadata_json->'$.action_response.edit.title')) as contact_page
+                                from core_experiment_actions ea
+                                  join core_experiment_actions eab
+                                     on ea.metadata_json->'$.lang' = eab.metadata_json->'$.lang'
+                                        and ea.action_object_id = eab.metadata_json->'$.thanks_response.result.recipient'
+                                  where ea.action_subject_id='gratitude_thankee_survey'
+                                       and ea.created_dt >= date_sub(curdate(), interval 24 hour)
+                                """
+        survey_recip_df = pd.read_sql(survey_recip_sql, self.db_engine)
+        survey_recip_df.to_csv(self.outfile_survey_recips, encoding='utf-8')
+        self.survey_recip_html = survey_recip_df.to_html()
+
     def send_email(self):
 
         COMMASPACE = ', '
@@ -139,16 +157,21 @@ class EmailReport:
         doc_text_4 = f'''<h2>Superthankers thanks given status</h2>
 <p>This query represents how many thanks each superthanker has sent.
                          </p>'''
+        doc_text_5 = f'''<h2>Yesterday's survey recipients</h2>
+<p>This query represents who received surveys yesterday.
+                         </p>'''
         send_text = doc_text_1 + self.yesterday_html + \
                     doc_text_2 + self.thankee_html + \
                     doc_text_3 + self.thankee_candidates_html + \
-                    doc_text_4 + self.superthanker_thanks_html
+                    doc_text_4 + self.superthanker_thanks_html + \
+                    doc_text_5 + self.survey_recip_html
         msg.attach(MIMEText(send_text, 'html'))
 
         for (outfile, fname) in [(self.outfile_yesterday, self.fname_yesterday),
                                  (self.outfile_thankee, self.fname_thankee),
                                  (self.outfile_superthankers, self.fname_superthankers),
-                                 (self.outfile_candidates, self.fname_candidates)]:
+                                 (self.outfile_candidates, self.fname_candidates),
+                                 (self.outfile_survey_recips, self.fname_survey_recips)]:
             with codecs.open(outfile, 'r', encoding='utf8') as f:
                 text = f.read()
                 part = MIMEText(text, 'csv', 'utf-8')
@@ -166,6 +189,7 @@ class EmailReport:
         self.thankee_completion_status()
         self.thankee_completion_candidates()
         self.superthanker_thanks()
+        self.survey_recipients()
         self.send_email()
         logging.info("Done running Email report")
 
