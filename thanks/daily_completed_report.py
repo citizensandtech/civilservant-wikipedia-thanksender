@@ -121,16 +121,16 @@ class EmailReport:
         self.superthanker_thanks_html = superthanker_df.to_html()
 
     def survey_recipients(self):
-        survey_recip_sql="""-- the users that were surveyed recently
-                                select ea.metadata_json->'$.lang' as lang, ea.action_object_id as user_name,
-                                  eab.created_dt as thanked_date,
-                                  concat('https://',json_unquote(ea.metadata_json->'$.lang'),'.wikipedia.org/wiki',json_unquote(ea.metadata_json->'$.action_response.edit.title')) as contact_page
-                                from core_experiment_actions ea
-                                  join core_experiment_actions eab
-                                     on ea.metadata_json->'$.lang' = eab.metadata_json->'$.lang'
-                                        and ea.action_object_id = eab.metadata_json->'$.thanks_response.result.recipient'
-                                  where ea.action_subject_id='gratitude_thankee_survey'
-                                       and ea.created_dt >= date_sub(curdate(), interval 24 hour)
+        survey_recip_sql = """-- the users that were surveyed recently
+select ea.metadata_json->'$.lang' as lang, ea.action_object_id as user_name,
+  eab.created_dt as thanked_date,
+  concat('https://',json_unquote(ea.metadata_json->'$.lang'),'.wikipedia.org/wiki/', replace(json_unquote(ea.metadata_json->'$.action_response.edit.title'),' ','_')) as contact_page
+from core_experiment_actions ea
+  join core_experiment_actions eab
+     on ea.metadata_json->'$.lang' = eab.metadata_json->'$.lang'
+        and ea.action_object_id = eab.metadata_json->'$.thanks_response.result.recipient'
+  where ea.action_subject_id='gratitude_thankee_survey'
+       and ea.created_dt >= date_sub(curdate(), interval 24 hour)
                                 """
         survey_recip_df = pd.read_sql(survey_recip_sql, self.db_engine)
         survey_recip_df.to_csv(self.outfile_survey_recips, encoding='utf-8')
