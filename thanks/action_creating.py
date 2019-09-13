@@ -209,6 +209,8 @@ def make_experiment_actions(db, thankees_and_control, intervention_name, interve
 
 
 def uniqueify_thanked_thankees(thanked_thankees):
+    for (e, f) in thanked_thankees:
+        logging.debug(f'uniq, {e.id}||{e.metadata_json}, {f.id}|||{f.metadata_json}')
     thankee_ids_all = [
         (expAction.metadata_json['lang'], expAction.metadata_json['thanks_response']['result']['recipient']) for
         (expAction, expActionSurvey) in thanked_thankees]
