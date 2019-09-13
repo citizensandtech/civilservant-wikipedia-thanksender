@@ -35,7 +35,7 @@ class EmailReport:
         self.fname_thankee = f"thankee_completion_report_{self.date}.csv"
         self.fname_candidates = f"thankee_candidates_report_{self.date}.csv"
         self.fname_superthankers = f"superthankers_report_{self.date}.csv"
-        self.fname_survey_recips = f"superthankers_report_{self.date}.csv"
+        self.fname_survey_recips = f"survey_recips_{self.date}.csv"
         self.outfile_yesterday = os.path.join(self.CSVDIR, self.fname_yesterday)
         self.outfile_thankee = os.path.join(self.CSVDIR, self.fname_thankee)
         self.outfile_candidates = os.path.join(self.CSVDIR, self.fname_candidates)
