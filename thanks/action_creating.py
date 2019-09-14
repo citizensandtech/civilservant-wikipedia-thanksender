@@ -99,9 +99,9 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
         logging.debug(f'Thankee {expThing.id} has block_id {block_id}')
         try:
             block_partner = db.query(ExperimentThing) \
-                .filter(ExperimentThing.metadata_json['randomization_block_id'] == block_id,
+                .filter(and_(ExperimentThing.metadata_json['randomization_block_id'] == block_id,
                         ExperimentThing.randomization_arm == 0,
-                        ExperimentThing.metadata_json['sync_object']['lang'] == block_lang).one()
+                        ExperimentThing.metadata_json['sync_object']['lang'] == block_lang)).one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(f"Cannot find matching pair for thankee {expThing.metadata_json}")
         except sqlalchemy.orm.exc.MultipleResultsFound:

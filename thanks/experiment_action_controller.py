@@ -127,7 +127,6 @@ class ExperimentActionController(object):
         prev_errors = experiment_action.metadata_json['errors'] if "errors" in experiment_action.metadata_json else []
 
         try:
-            # send thanks
             action_complete, action_response = attempt_action(action=experiment_action,
                                              intervention_name=self.intervention_name,
                                              intervention_type=self.intervention_type,
