@@ -213,14 +213,18 @@ def make_experiment_actions(db, thankees_and_control, intervention_name, interve
 
 
 def uniqueify_thanked_thankees(thanked_thankees):
-    thankee_ids_all = [
-        (expAction.metadata_json['lang'], expAction.metadata_json['thanks_response']['result']['recipient']) for
-        (expAction, expActionSurvey) in thanked_thankees]
-    thankee_ids_uniq = list(set(thankee_ids_all))
-    return [(expAction, expActionSurvey) for (expAction, expActionSurvey) in thanked_thankees
-            if (expAction.metadata_json['lang'], expAction.metadata_json['thanks_response']['result']['recipient']) if
-            thankee_ids_uniq]
-
+    # make sure the thankees are unique to avoid sending duplicated messages
+    unique_thanked_thankees = []
+    seen_thankees = set()
+    for (expActionThank, expActionSurvey) in thanked_thankees:
+        user_name_lang = expActionThank.metadata_json['thanks_response']['result']['recipient'], \
+                         expActionThank.metadata_json['lang']
+        if user_name_lang not in seen_thankees:
+            unique_thanked_thankees.append((expActionThank, expActionSurvey))
+            seen_thankees.add(user_name_lang)
+        else:
+            continue
+    return unique_thanked_thankees
 
 def get_thanked_thankees(db, thanks_latest_date, intervention_type, intervention_name):
     logging.info(f'Seeking thankees who received thanks before {thanks_latest_date}')

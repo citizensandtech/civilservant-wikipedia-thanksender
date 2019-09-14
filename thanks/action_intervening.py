@@ -34,7 +34,7 @@ def attempt_talk_page_message(action, intervention_name, intervention_type, api_
                                                  post_text=page_text,
                                                  mwapi_session=None,
                                                  auth=None,
-                                                 skip_words=[],
+                                                 skip_words=['CivilServantBot'],
                                                  dry_run=dry_run,
                                                  check_blocked=True)
 
