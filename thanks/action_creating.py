@@ -98,14 +98,15 @@ def create_actions_thankees_needing_survey(db, batch_size, lang, intervention_na
         block_lang = expThing.metadata_json["sync_object"]["lang"]
         logging.debug(f'Thankee {expThing.id} has block_id {block_id}')
         try:
-            block_partner = db.query(ExperimentThing) \
+            block_partner_q = db.query(ExperimentThing) \
                 .filter(ExperimentThing.metadata_json['randomization_block_id'] == block_id,
                         ExperimentThing.randomization_arm == 0,
-                        ExperimentThing.metadata_json['sync_object']['lang'] == block_lang).one()
+                        ExperimentThing.metadata_json['sync_object']['lang'] == block_lang)
+            block_partner = block_partner_q.one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(f"Cannot find matching pair for thankee {expThing.metadata_json}")
         except sqlalchemy.orm.exc.MultipleResultsFound:
-            raise ValueError(f"Multiple results found for block partner for {expThing.id}")
+            raise ValueError(f"Multiple results found for block partner for {expThing.id}. Results were {block_partner_q.all()}")
         thankees_and_control_needing_survey_experiment_action.append(expThing)
         thankees_and_control_needing_survey_experiment_action.append(block_partner)
 
@@ -166,10 +167,12 @@ def make_matching_partners(db, thanked_thankees):
     # get the matching pairs based on the block.
     thankees_and_control = []
     for (expAction, expActionSurvey) in thanked_thankees:
+        lang, user_name = expAction.metadata_json['lang'], expAction.metadata_json['thanks_response']['result']['recipient']
+        logging.debug(f'Trying to get partner for {lang}, {user_name}')
         expThing = db.query(ExperimentThing) \
-            .filter(and_(ExperimentThing.metadata_json['sync_object']['lang'] == expAction.metadata_json['lang'],
-                         ExperimentThing.metadata_json['sync_object']['user_name'] ==
-                         expAction.metadata_json['thanks_response']['result']['recipient'])
+            .filter(and_(ExperimentThing.metadata_json['sync_object']['lang'] == lang,
+                         ExperimentThing.metadata_json['sync_object']['user_name'] == user_name,
+                         ExperimentThing.randomization_condition == 'thankee')
                     ).one()
         block_id = expThing.metadata_json["randomization_block_id"]
         block_lang = expThing.metadata_json["sync_object"]["lang"]
