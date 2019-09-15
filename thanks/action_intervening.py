@@ -55,9 +55,8 @@ def attempt_action(action, intervention_name, intervention_type, api_con, dry_ru
     intervention_type_fn = {'talk_page_message': attempt_talk_page_message}
 
     try:
-        return intervention_type_fn[intervention_type](action, intervention_name, intervention_type, api_con, dry_run)
+        intervention_fn = intervention_type_fn[intervention_type]
     except KeyError as e:
         logging.info(f'No intervening logic defined for intervention: {intervention_type}. {e}')
         raise
-    except ValueError as e:
-        raise
+    return intervention_fn(action, intervention_name, intervention_type, api_con, dry_run)
