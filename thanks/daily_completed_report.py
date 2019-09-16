@@ -100,7 +100,6 @@ select thanks_complete.lang, cands_complete.user_completed as `completed?` , tha
          and thanks_complete.thanks_sent=cands_complete.user_completed;
 """
         thankee_df = pd.read_sql(thankee_complete_sql, self.db_engine)
-        logging.info(f"found {thankee_df['num_thanks_sent'].sum()} thankees")
         thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
         self.thankee_html = thankee_df.to_html()
 
