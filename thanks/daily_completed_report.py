@@ -81,15 +81,24 @@ class EmailReport:
         self.yesterday_html = yesterday_df.to_html()
 
     def thankee_completion_status(self):
-        thankee_complete_sql = """with  ea as (select json_unquote(metadata_json->"$.lang") as lang, json_unquote(metadata_json->"$.thanks_response.result.recipient") as user_name, metadata_json->"$.thanks_sent" as thanks_sent
-                                            from core_experiment_actions where action = 'thank' and metadata_json->"$.thanks_sent" = TRUE),
-                                         et as (select json_unquote(metadata_json->"$.sync_object.lang") as lang, json_unquote(metadata_json->"$.sync_object.user_name") as user_name,
-                                                  metadata_json->"$.sync_object.user_id" as user_id from core_experiment_things where experiment_id=-3 and removed_dt is NULL),
-                                         ts as (select et.lang, et.user_name, ea.thanks_sent
-                                                    from  et left join ea on et.lang=ea.lang and et.user_name=ea.user_name)
-                                      select lang, ifnull(thanks_sent, "false") as thanks_sent, count(*) as num_thanks_sent from
-                                          ts group by lang, thanks_sent order by lang, thanks_sent
-                                """
+        thankee_complete_sql = """with ea as (select json_unquote(metadata_json->"$.lang") as lang, json_unquote(metadata_json->"$.thanks_response.result.recipient") as user_name, if(metadata_json->'$.thanks_sent'=TRUE,1,0) as thanks_sent
+                    from core_experiment_actions where action = 'thank' and metadata_json->"$.thanks_sent" = TRUE),
+     et as (select json_unquote(metadata_json->"$.sync_object.lang") as lang, json_unquote(metadata_json->"$.sync_object.user_name") as user_name,
+              metadata_json->"$.sync_object.user_id" as user_id
+                    from core_experiment_things where experiment_id=-3 and removed_dt is NULL and randomization_arm=1),
+     thanks_sent as (select et.lang, et.user_name, ea.thanks_sent
+                    from  et left join ea on et.lang=ea.lang and et.user_name=ea.user_name),
+     thanks_complete as (select lang, ifnull(thanks_sent, 0) as thanks_sent, count(*) as num_thanks_sent
+                    from thanks_sent group by lang, thanks_sent order by lang, thanks_sent),
+     cands_et as (select et.lang, cc.user_completed, cc.user_name
+                    from et join core_candidates cc on et.lang=cc.lang and et.user_name=cc.user_name),
+     cands_complete as (select lang, user_completed, count(*) as thankee_candidates_completed from cands_et group by lang, user_completed)
+select thanks_complete.lang, cands_complete.user_completed as `completed?` , thankee_candidates_completed as unique_thankees_completed, num_thanks_sent as total_thanks_incl_multiples
+      from thanks_complete
+      join cands_complete
+      on thanks_complete.lang = cands_complete.lang
+         and thanks_complete.thanks_sent=cands_complete.user_completed;
+"""
         thankee_df = pd.read_sql(thankee_complete_sql, self.db_engine)
         logging.info(f"found {thankee_df['num_thanks_sent'].sum()} thankees")
         thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
@@ -151,10 +160,7 @@ from core_experiment_actions ea
 <p>This query represents all the users who have made Experiment Actions in the previous 24 hours, and their total number of actions ever.
                          </p>'''
         doc_text_2 = f'''<h2>thanker actions status</h2>
-<p>This query represents how many thanks have been sent by by thankers (we thought it was the number of thankees, but a bug meant that until 2019.8.8 a thankee was being thanked multiple times).
-                         </p>'''
-        doc_text_3 = f'''<h2>thankee candidates status</h2>
-<p>This query represents how many thankees "candidates" have been marked as completed.
+<p>This query represents how many thanks have been sent by thankers, and how many users have been marked as completed.
                          </p>'''
         doc_text_4 = f'''<h2>Superthankers thanks given status</h2>
 <p>This query represents how many thanks each superthanker has sent.
@@ -164,7 +170,6 @@ from core_experiment_actions ea
                          </p>'''
         send_text = doc_text_1 + self.yesterday_html + \
                     doc_text_2 + self.thankee_html + \
-                    doc_text_3 + self.thankee_candidates_html + \
                     doc_text_4 + self.superthanker_thanks_html + \
                     doc_text_5 + self.survey_recip_html
         msg.attach(MIMEText(send_text, 'html'))
