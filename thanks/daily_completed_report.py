@@ -81,23 +81,32 @@ class EmailReport:
         self.yesterday_html = yesterday_df.to_html()
 
     def thankee_completion_status(self):
-        thankee_complete_sql = """with ea as (select json_unquote(metadata_json->"$.lang") as lang, json_unquote(metadata_json->"$.thanks_response.result.recipient") as user_name, if(metadata_json->'$.thanks_sent'=TRUE,1,0) as thanks_sent
-                    from core_experiment_actions where action = 'thank' and metadata_json->"$.thanks_sent" = TRUE),
-     et as (select json_unquote(metadata_json->"$.sync_object.lang") as lang, json_unquote(metadata_json->"$.sync_object.user_name") as user_name,
-              metadata_json->"$.sync_object.user_id" as user_id
+        thankee_complete_sql = """with ea as (select json_unquote(metadata_json->'$.lang') as lang, json_unquote(metadata_json->'$.thanks_response.result.recipient') as user_name, if(metadata_json->'$.thanks_sent'=TRUE,1,0) as thanks_sent
+                    from core_experiment_actions where action = 'thank' and metadata_json->'$.thanks_sent' = TRUE),
+     et as (select json_unquote(metadata_json->'$.sync_object.lang') as lang, json_unquote(metadata_json->'$.sync_object.user_name') as user_name,
+              metadata_json->'$.sync_object.user_id' as user_id, metadata_json->'$.sync_object.user_experience_level' as user_experience_level
                     from core_experiment_things where experiment_id=-3 and removed_dt is NULL and randomization_arm=1),
-     thanks_sent as (select et.lang, et.user_name, ea.thanks_sent
+     thanks_sent as (select et.lang, et.user_name, ea.thanks_sent, et.user_experience_level
                     from  et left join ea on et.lang=ea.lang and et.user_name=ea.user_name),
-     thanks_complete as (select lang, ifnull(thanks_sent, 0) as thanks_sent, count(*) as num_thanks_sent
-                    from thanks_sent group by lang, thanks_sent order by lang, thanks_sent),
-     cands_et as (select et.lang, cc.user_completed, cc.user_name
+     thanks_complete as (select lang, ifnull(thanks_sent, 0) as thanks_sent, count(*) as num_thanks_sent, user_experience_level
+                    from thanks_sent group by lang, thanks_sent, user_experience_level order by lang, thanks_sent),
+     cands_et as (select et.lang, cc.user_completed, cc.user_name, et.user_experience_level
                     from et join core_candidates cc on et.lang=cc.lang and et.user_name=cc.user_name),
-     cands_complete as (select lang, user_completed, count(*) as thankee_candidates_completed from cands_et group by lang, user_completed)
-select thanks_complete.lang, cands_complete.user_completed as `completed?` , thankee_candidates_completed as unique_thankees_completed, num_thanks_sent as total_thanks_incl_multiples
+     cands_complete as (select lang, user_completed, count(*) as thankee_candidates_completed, user_experience_level from cands_et group by lang, user_completed, user_experience_level),
+     thanks_cands as (select thanks_complete.lang, cands_complete.user_completed as `completed?`,
+        thanks_complete.user_experience_level,
+        thankee_candidates_completed as unique_thankees,
+        num_thanks_sent as total_thanks_incl_multiples
       from thanks_complete
       join cands_complete
       on thanks_complete.lang = cands_complete.lang
-         and thanks_complete.thanks_sent=cands_complete.user_completed;
+         and thanks_complete.thanks_sent=cands_complete.user_completed
+         and thanks_complete.user_experience_level=cands_complete.user_experience_level)
+select lang, `completed?`, user_experience_level=0 as `newcomer?`, sum(unique_thankees), sum(total_thanks_incl_multiples)
+      from thanks_cands
+        where lang!='en'
+      group by lang, `completed?`, user_experience_level = 0
+      order by lang, `completed?`, `newcomer?`;
 """
         thankee_df = pd.read_sql(thankee_complete_sql, self.db_engine)
         thankee_df.to_csv(self.outfile_thankee, encoding='utf-8')
