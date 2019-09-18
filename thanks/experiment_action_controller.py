@@ -91,8 +91,7 @@ class ExperimentActionController(object):
                             .limit(self.batch_size) \
                             .all()
 
-        logging.debug(incomplete_actions_q)
-        logging.info(f"Found {len(incomplete_actions)} thanks needing sending. lang is {self.lang}")
+        # logging.debug(incomplete_actions_q)logging.info(f"Found {len(incomplete_actions)} thanks needing sending. lang is {self.lang}")
         return incomplete_actions
 
     def execute_actions(self, incomplete_actions):
