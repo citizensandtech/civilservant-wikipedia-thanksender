@@ -3,3 +3,9 @@
 datatransfer/*
 lib/*
 *.env*
+
+logs/
+
+thanks/__pycache__/
+
+thanks/creators/__pycache__/

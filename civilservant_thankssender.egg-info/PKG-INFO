@@ -1,0 +1,20 @@
+Metadata-Version: 1.2
+Name: civilservant-thankssender
+Version: 0.0.0
+Summary: Send thanks via Wikipedia API
+Home-page: UNKNOWN
+Author: The CivilServant Team
+Author-email: "system.operations@civilservant.io"
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Topic :: Software Development
+Classifier: Topic :: Scientific/Engineering
+Requires-Python: >= 3.7

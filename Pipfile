@@ -10,6 +10,7 @@ civilservant = "*"
 docutils = "==0.15"
 civilservant-core = {editable = true,git = "https://github.com/mitmedialab/civilservantlib"}
 civilservant-wikipedia = {editable = true,git = ""}
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"

@@ -1,5 +1,6 @@
 import datetime
 import os
+import sys
 import time
 from operator import and_
 
@@ -8,7 +9,7 @@ import mwoauth as mwoauth
 from requests_oauthlib import OAuth1
 from sqlalchemy import and_, or_, func, desc
 import sqlalchemy
-from civilservant.util import PlatformType, ThingType
+from civilservant.util import PlatformType, ThingType, read_config_file
 from thanks.utils import update_action_status, MaxInterventionAttemptsExceededError
 
 import civilservant.logs
@@ -19,6 +20,7 @@ from civilservant.models.core import ExperimentAction, OAuthUser, ExperimentThin
 from thanks.action_creating import create_actions
 from thanks.action_intervening import attempt_action
 
+import importlib
 
 
 class ExperimentActionController(object):
@@ -39,11 +41,14 @@ class ExperimentActionController(object):
     """
 
     def __init__(self, lang=None, dry_run=True, enable_create_actions=True,
-                 enable_execute_actions=True):
+                 enable_execute_actions=True, config_file=None):
+        if config_file:
+            self.config = read_config_file(config_file, __file__)
+
         self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', 2))
         logging.info(f"Survey batch size set to : {self.batch_size}")
         self.db_session = init_session()
-        self.lang = lang
+        self.lang = os.getenv('CS_WIKIPEDIA_LANG', lang)
         logging.info(f"Survey sending language set to. {self.lang}")
         self.consumer_token = mwoauth.ConsumerToken(
             os.environ['CS_OAUTH_CONSUMER_KEY'],
@@ -61,12 +66,20 @@ class ExperimentActionController(object):
         Optional, create new actions that will be picked up later.
         Sometimes other processes may generate acitons (like users in sending gratitude).
         Other times the action needs to be created by ourselves (like sending out a survey).
+
+        Creator functions are excepted in the as function in the module <creators.intervention_name.intervention_name>
+        They take a db session, a batch size, a lang, and the intervention name and type.
         :return: list of experimentActions or None if there are no actions to be created
         """
-        return create_actions(db=self.db_session,
+        creator = f'thanks.creators.{self.intervention_name}'
+        creator_module = importlib.import_module(creator)
+        creator_fn = getattr(creator_module, self.intervention_name)
+        return creator_fn(db=self.db_session,
                               batch_size=self.batch_size, lang=self.lang,
                               intervention_name=self.intervention_name,
-                              intervention_type=self.intervention_type)
+                              intervention_type=self.intervention_type,
+                              config=self.config)
+
 
     def find_incomplete_actions(self):
         """
@@ -169,5 +182,9 @@ class ExperimentActionController(object):
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 
 if __name__ == "__main__":
-    eac = ExperimentActionController(lang=None, dry_run=True)
+    create = True if sys.argv[1] == '--create' else False
+    execute = True if sys.argv[1] == '--execute' else False
+    eac = ExperimentActionController(lang=None, dry_run=True,
+                                     enable_create_actions=create, enable_execute_actions=execute,
+                                     config_file='frwiki_welcome.yaml')
     eac.run()
