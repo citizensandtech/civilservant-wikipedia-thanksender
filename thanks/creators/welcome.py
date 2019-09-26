@@ -1,7 +1,8 @@
 import math
+import random
 
 from civilservant.wikipedia.connections.api import get_mwapi_session
-from civilservant.wikipedia.queries.sites import get_new_users
+from civilservant.wikipedia.queries.sites import get_new_users, get_volunteer_signing_users
 from civilservant.models.core import Experiment, ExperimentThing, ExperimentAction
 from civilservant.models.wikipedia import WikipediaUser
 from civilservant.util import ThingType, PlatformType
@@ -23,23 +24,32 @@ def welcome(db, batch_size, lang, intervention_name, intervention_type, config):
 
     new_users, continuation = get_new_users(mwapi_session)
 
-    new_actions = []
-    for new_user in new_users:
-        if _user_exists_in_db(db, lang, user_name=new_user['user_name']):
-            logging.info(f'Already know about {lang}:{new_user["user_name"]} in db')
-            continue
-        else:
-            wikipedia_user, experiment_thing, experiment_action = _create_new_user(db, lang, new_user,
+    new_known_users = [user for user in new_users if _user_exists_in_db(db, lang, user_name=user['user_name'])]
+
+    new_unknown_users = [user for user in new_users if user not in new_known_users]
+
+    logging.info(f'There were {len(new_known_users)} already known new users '
+                 f'and {len(new_unknown_users)} unknown new users')
+    assert len(new_known_users) + len(new_unknown_users) == len(new_users)
+
+    if not new_unknown_users:
+        #nobody new to report
+        return []
+    else:
+        new_actions = []
+        volunteer_signing_users = get_volunteer_signing_users(mwapi_session, lang)
+        for new_unknown_user in new_unknown_users:
+
+            wikipedia_user, experiment_thing, experiment_action = _create_new_user(db, lang, new_unknown_user,
                                                                                    intervention_name,
                                                                                     intervention_type,
-                                                                                   config)
+                                                                                   config, volunteer_signing_users)
             db.add(wikipedia_user) # may already be done
             db.add(experiment_thing)
             db.add(experiment_action)
             db.commit()
             new_actions.append(experiment_action)
-
-    return new_actions
+        return new_actions
 
 def _user_exists_in_db(db, lang, user_name):
     """
@@ -54,7 +64,7 @@ def _user_exists_in_db(db, lang, user_name):
     #TODO check that ET also exists and raise assertion error if not
     return True if db_user else False
 
-def _create_new_user(db, lang, new_user, intervention_name, intervention_type, config):
+def _create_new_user(db, lang, new_user, intervention_name, intervention_type, config, volunteer_signing_users):
     # 0. create a wikipedia user
     wikipedia_user = WikipediaUser(lang=lang,
                   user_name=new_user['user_name'],
@@ -75,9 +85,10 @@ def _create_new_user(db, lang, new_user, intervention_name, intervention_type, c
                                        object_type=ThingType.WIKIPEDIA_USER,
                                        object_platform=PlatformType.WIKIPEDIA,
                                        randomization_arm=randomization_arm,
-                                       randomization_condition='welcome',
+                                       randomization_condition='fr_wiki_welcome',
                                        metadata_json={"randomization_block_id":randomization_block_id})
-    # 3. create an action based on the randomization and user, and signatory.
+    # 3. create an action based on the randomization and user, and new mentor.
+    signer = random.choice(volunteer_signing_users)
 
     experiment_action = ExperimentAction(experiment_id=experiment_id,
                                      action_object_id=wu_id,
@@ -87,7 +98,9 @@ def _create_new_user(db, lang, new_user, intervention_name, intervention_type, c
                                      action_platform=PlatformType.WIKIPEDIA,
                                      action_key_id=randomization_arm,
                                      action=intervention_type,
-                                     metadata_json={"randomization_arm":randomization_arm})
+                                     metadata_json={"randomization_arm":randomization_arm,
+                                                    "signer":signer,
+                                                    "lang":lang})
     return wikipedia_user, experiment_thing, experiment_action
 
 
