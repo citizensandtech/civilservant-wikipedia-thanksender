@@ -43,7 +43,7 @@ class ExperimentActionController(object):
         self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', 2))
         logging.info(f"Survey batch size set to : {self.batch_size}")
         self.db_session = init_session()
-        self.lang = lang
+        self.lang = os.getenv('CS_WIKIPEDIA_LANG', lang)
         logging.info(f"Survey sending language set to. {self.lang}")
         self.consumer_token = mwoauth.ConsumerToken(
             os.environ['CS_OAUTH_CONSUMER_KEY'],
