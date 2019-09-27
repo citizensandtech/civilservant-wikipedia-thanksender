@@ -41,10 +41,8 @@ class ExperimentActionController(object):
     """
 
     def __init__(self, lang=None, dry_run=True, enable_create_actions=True,
-                 enable_execute_actions=True, config_file=None):
-        if config_file:
-            self.config = read_config_file(config_file, __file__)
-
+                 enable_execute_actions=True):
+        self.config = read_config_file(os.environ['CS_EXTRA_CONFIG_FILE'], __file__)
         self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', 2))
         logging.info(f"Survey batch size set to : {self.batch_size}")
         self.db_session = init_session()
@@ -185,6 +183,5 @@ if __name__ == "__main__":
     create = True if sys.argv[1] == '--create' else False
     execute = True if sys.argv[1] == '--execute' else False
     eac = ExperimentActionController(lang=None, dry_run=True,
-                                     enable_create_actions=create, enable_execute_actions=execute,
-                                     config_file='frwiki_welcome.yaml')
+                                     enable_create_actions=create, enable_execute_actions=execute)
     eac.run()
