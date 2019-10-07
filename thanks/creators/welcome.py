@@ -85,7 +85,7 @@ def _create_new_user(db, lang, new_user, intervention_name, intervention_type, c
                                        object_type=ThingType.WIKIPEDIA_USER,
                                        object_platform=PlatformType.WIKIPEDIA,
                                        randomization_arm=randomization_arm,
-                                       randomization_condition='fr_wiki_welcome',
+                                       randomization_condition='welcome',
                                        metadata_json={"randomization_block_id":randomization_block_id})
     # 3. create an action based on the randomization and user, and new mentor.
     signer = random.choice(volunteer_signing_users)

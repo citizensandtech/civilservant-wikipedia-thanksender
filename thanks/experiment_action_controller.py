@@ -40,7 +40,7 @@ class ExperimentActionController(object):
        - list of dicts --> {dt: errorstr} #TODO if uncaught error have a dict that contains the stracktrace etc.
     """
 
-    def __init__(self, lang=None, dry_run=True, enable_create_actions=True,
+    def __init__(self, lang=None, enable_create_actions=True,
                  enable_execute_actions=True):
         self.config = read_config_file(os.environ['CS_EXTRA_CONFIG_FILE'], __file__)
         self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', 2))
@@ -55,7 +55,7 @@ class ExperimentActionController(object):
         self.intervention_type = os.environ['CS_WIKIPEDIA_INTERVENTION_TYPE']
         self.intervention_name = os.environ['CS_WIKIPEDIA_INTERVENTION_NAME']
         self.api_con = None # a slot for a connection or session to keep open between different phases.
-        self.dry_run = dry_run
+        self.dry_run = bool(os.getenv('CS_DRY_RUN', False))
         self.enable_create_actions = enable_create_actions
         self.enable_execute_actions = enable_execute_actions
 
@@ -182,6 +182,6 @@ class ExperimentActionController(object):
 if __name__ == "__main__":
     create = True if sys.argv[1] == '--create' else False
     execute = True if sys.argv[1] == '--execute' else False
-    eac = ExperimentActionController(lang=None, dry_run=True,
+    eac = ExperimentActionController(lang=None,
                                      enable_create_actions=create, enable_execute_actions=execute)
     eac.run()
