@@ -13,6 +13,7 @@ from civilservant.util import PlatformType, ThingType, read_config_file
 from thanks.utils import update_action_status, MaxInterventionAttemptsExceededError
 
 import civilservant.logs
+
 civilservant.logs.initialize()
 import logging
 from civilservant.db import init_session
@@ -54,7 +55,7 @@ class ExperimentActionController(object):
         self.max_send_errors = int(os.getenv('CS_OAUTH_THANKS_MAX_SEND_ERRORS', 5))
         self.intervention_type = os.environ['CS_WIKIPEDIA_INTERVENTION_TYPE']
         self.intervention_name = os.environ['CS_WIKIPEDIA_INTERVENTION_NAME']
-        self.api_con = None # a slot for a connection or session to keep open between different phases.
+        self.api_con = None  # a slot for a connection or session to keep open between different phases.
         self.dry_run = bool(os.getenv('CS_DRY_RUN', False))
         self.enable_create_actions = enable_create_actions
         self.enable_execute_actions = enable_execute_actions
@@ -73,11 +74,10 @@ class ExperimentActionController(object):
         creator_module = importlib.import_module(creator)
         creator_fn = getattr(creator_module, self.intervention_name)
         return creator_fn(db=self.db_session,
-                              batch_size=self.batch_size, lang=self.lang,
-                              intervention_name=self.intervention_name,
-                              intervention_type=self.intervention_type,
-                              config=self.config)
-
+                          batch_size=self.batch_size, lang=self.lang,
+                          intervention_name=self.intervention_name,
+                          intervention_type=self.intervention_type,
+                          config=self.config)
 
     def find_incomplete_actions(self):
         """
@@ -90,17 +90,17 @@ class ExperimentActionController(object):
         :return: list of experimentActions
         """
         incomplete_actions_q = self.db_session.query(ExperimentAction) \
-        .filter(and_(ExperimentAction.action_subject_id==self.intervention_name,
-                ExperimentAction.action==self.intervention_type,
-                ExperimentAction.metadata_json['action_complete'] == None))
+            .filter(and_(ExperimentAction.action_subject_id == self.intervention_name,
+                         ExperimentAction.action == self.intervention_type,
+                         ExperimentAction.metadata_json['action_complete'] == None))
 
         if self.lang:
             incomplete_actions_q = incomplete_actions_q.filter(ExperimentAction.metadata_json["lang"] == self.lang)
 
         incomplete_actions = incomplete_actions_q.order_by(desc(ExperimentAction.created_dt)) \
-                            .with_for_update(skip_locked=True) \
-                            .limit(self.batch_size) \
-                            .all()
+            .with_for_update(skip_locked=True) \
+            .limit(self.batch_size) \
+            .all()
 
         # logging.debug(incomplete_actions_q)logging.info(f"Found {len(incomplete_actions)} thanks needing sending. lang is {self.lang}")
         return incomplete_actions
@@ -123,6 +123,11 @@ class ExperimentActionController(object):
                 self.db_session.rollback()
         return action_fatalities
 
+    def load_action_fn(self):
+        executor = f'thanks.executors.{self.intervention_type}'
+        executor_module = importlib.import_module(executor)
+        return getattr(executor_module, self.intervention_type)
+
     def intervene_once(self, experiment_action):
         """
         States that survey Experiment acitons ought to be in: by metadata_json dict.
@@ -137,10 +142,12 @@ class ExperimentActionController(object):
         prev_errors = experiment_action.metadata_json['errors'] if "errors" in experiment_action.metadata_json else []
 
         try:
-            action_complete, action_response = attempt_action(action=experiment_action,
-                                             intervention_name=self.intervention_name,
-                                             intervention_type=self.intervention_type,
-                                             api_con=self.api_con, dry_run=self.dry_run)
+            action_complete, action_response = self.load_action_fn()(action=experiment_action,
+                                                                     intervention_name=self.intervention_name,
+                                                                     intervention_type=self.intervention_type,
+                                                                     api_con=self.api_con,
+                                                                     dry_run=self.dry_run,
+                                                                     config=self.config)
             experiment_action.metadata_json['action_complete'] = action_complete
             experiment_action.metadata_json['action_response'] = action_response
             experiment_action.metadata_json['errors'] = prev_errors
@@ -160,9 +167,9 @@ class ExperimentActionController(object):
         finally:
             # assert either sucess or extra error.
             sucessfully_sent = experiment_action.metadata_json['action_complete'] == True \
-                                  if "action_complete" in experiment_action.metadata_json else False
+                if "action_complete" in experiment_action.metadata_json else False
             correct_error_count = len(prev_errors) + 1 == len(experiment_action.metadata_json["errors"]) \
-                                       if "errors" in experiment_action.metadata_json else True
+                if "errors" in experiment_action.metadata_json else True
             assert sucessfully_sent or correct_error_count, "neither success nor extra error recorded"
 
     def run(self):
@@ -178,6 +185,7 @@ class ExperimentActionController(object):
             logging.info(f'Action fatalities were: {action_fatalities}')
 
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
+
 
 if __name__ == "__main__":
     create = True if sys.argv[1] == '--create' else False

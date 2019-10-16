@@ -1,13 +1,14 @@
 import math
 import random
 
-from civilservant.wikipedia.connections.api import get_mwapi_session
+from civilservant.wikipedia.connections.api import get_mwapi_session, get_auth
 from civilservant.wikipedia.queries.sites import get_new_users, get_volunteer_signing_users
 from civilservant.models.core import Experiment, ExperimentThing, ExperimentAction
 from civilservant.models.wikipedia import WikipediaUser
 from civilservant.util import ThingType, PlatformType
 
 import civilservant.logs
+from sqlalchemy import func, desc
 
 civilservant.logs.initialize()
 import logging
@@ -24,7 +25,13 @@ def welcome(db, batch_size, lang, intervention_name, intervention_type, config):
     """
     mwapi_session = get_mwapi_session(lang=lang)
 
-    new_users, continuation = get_new_users(mwapi_session)
+    auth = get_auth()
+
+    experiment_id = _get_experiment_id(db, config['name'])
+
+    latest_registration = _get_last_registration_of_last_onboarded_user(db, experiment_id)
+
+    new_users, continuation = get_new_users(mwapi_session, auth=auth, end_time=latest_registration)
 
     new_known_users = [user for user in new_users if _user_exists_in_db(db, lang, user_name=user['user_name'])]
 
@@ -65,10 +72,10 @@ def _user_exists_in_db(db, lang, user_name):
     """
     user_q = db.query(WikipediaUser).filter_by(lang=lang, user_name=user_name)
     db_users = user_q.all()
-    if len(db_users)>1:
+    if len(db_users) > 1:
         logging.error('Found more than 1 already existing Wikipedia User. Something went wrong wrong.')
     # TODO check that ET also exists and raise assertion error if not
-    return True if len(db_users)>0 else False
+    return True if len(db_users) > 0 else False
 
 
 def _create_new_user(db, lang, new_user, intervention_name, intervention_type, config, volunteer_signing_users):
@@ -112,7 +119,9 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
     # 1. get their randomization
     experiment_name = config['name']
     experiment_id = _get_experiment_id(db, experiment_name)
-    randomization_arm, randomization_block_id = _get_next_randomization_arm(db, experiment_id, config)
+    randomization_arm, randomization_block_id, randomization_index = _get_next_randomization_arm(db, experiment_id,
+                                                                                                 config)
+    randomization_arm_obfuscated = _obfuscated_randomization_arm(db, experiment_id, randomization_arm)
     # 2. store the randomizaiton and user in an ET.
     experiment_thing = ExperimentThing(id=f'user:{lang}:{wikipedia_user.user_name}',
                                        thing_id=wu_id,
@@ -121,7 +130,8 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
                                        object_platform=PlatformType.WIKIPEDIA,
                                        randomization_arm=randomization_arm,
                                        randomization_condition='welcome',
-                                       metadata_json={"randomization_block_id": randomization_block_id})
+                                       metadata_json={"randomization_block_id": randomization_block_id,
+                                                      "randomization_index": randomization_index})
     # 3. create an action based on the randomization and user, and new mentor.
     signer = random.choice(volunteer_signing_users)
 
@@ -134,8 +144,10 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
                                          action_key_id=randomization_arm,
                                          action=intervention_type,
                                          metadata_json={"randomization_arm": randomization_arm,
+                                                        "randomization_arm_obfuscated": randomization_arm_obfuscated,
                                                         "signer": signer,
-                                                        "lang": lang})
+                                                        "lang": lang,
+                                                        "user_name": wikipedia_user.user_name})
     return wikipedia_user, experiment_thing, experiment_action
 
 
@@ -155,8 +167,21 @@ def _get_next_randomization_arm(db, experiment_id, config):
     randomziation_arm, randomization_block_id = randomizations[num_experiment_things]
     units_per_block = config['settings']['units_per_block']
     expected_block_id = math.floor(num_experiment_things / units_per_block)
+    expected_block_id = expected_block_id + 1  # switched to R generation method which is 1-indexed
     logging.debug(f'''Correct block calculation num_experiment_things:{num_experiment_things} 
     units_per_block:{units_per_block} expected_block_id:{expected_block_id} actual_block_id:{randomization_block_id}''')
     assert expected_block_id == randomization_block_id
 
-    return randomziation_arm, randomization_block_id,
+    return randomziation_arm, randomization_block_id, num_experiment_things
+
+
+def _obfuscated_randomization_arm(db, experiment_id, randomization_arm):
+    experiment = db.query(Experiment).filter_by(id=experiment_id).one()
+    randomization_obfuscations = experiment.settings_json['randomization_obfuscations']
+    return randomization_obfuscations[str(randomization_arm)]
+
+
+def _get_last_registration_of_last_onboarded_user(db, experiment_id):
+    latest_et = db.query(ExperimentThing).filter_by(experiment_id=experiment_id) \
+        .order_by(desc(ExperimentThing.created_dt)).limit(1).one_or_none()
+    return latest_et.created_dt if latest_et else None
