@@ -31,7 +31,11 @@ def welcome(db, batch_size, lang, intervention_name, intervention_type, config):
 
     latest_registration = _get_last_registration_of_last_onboarded_user(db, experiment_id)
 
+    logging.info(f'Latest registration of known users are: {latest_registration}')
+
     new_users = get_new_users(mwapi_session, auth=auth, end_time=latest_registration)
+
+    logging.info(f'New users polled.')
 
     new_known_users = [user for user in new_users if _user_exists_in_db(db, lang, user_name=user['user_name'])]
 
