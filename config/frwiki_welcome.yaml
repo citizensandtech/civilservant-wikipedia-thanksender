@@ -13,7 +13,7 @@ settings:
   randomization_obfuscations_file: fr-obfuscations.json
 
 message_settings:
-  seciton: 'new'
+  seciton: null
   skip_words: ['civilservant', 'loveless', 'bienvenue']
   check_blocked: True
   check_uncreated: True
