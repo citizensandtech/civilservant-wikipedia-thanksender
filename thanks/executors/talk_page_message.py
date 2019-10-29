@@ -56,6 +56,13 @@ def talk_page_message(action, intervention_name, intervention_type, api_con, dry
     :param dry_run:
     :return:
     """
+    # first test to see if the control arm is set to do nothing. as in don't message anyone.
+    control_action_is_skip = config['control_action_is_skip'] if 'control_action_is_skip' in config else False
+    if control_action_is_skip:
+        if action.metadata_json['randomization_arm'] == 0:
+            logging.debug('Control action is skip is True and randomization_arm is 0, so not sending a message.')
+            return True, 'control_action_is_skip'
+
     page_text, summary = get_template_and_fill(action, intervention_name)
 
     user_name = action.action_object_id
