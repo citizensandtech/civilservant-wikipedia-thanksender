@@ -123,6 +123,11 @@ class ExperimentActionController(object):
                 self.db_session.rollback()
         return action_fatalities
 
+    def load_validator_fn(self, creation_or_execution):
+        validator = f'thanks.validators.{self.intervention_name}'
+        validator_module = importlib.import_module(validator)
+        return getattr(validator_module, f'post_{creation_or_execution}_validators')
+
     def load_action_fn(self):
         executor = f'thanks.executors.{self.intervention_type}'
         executor_module = importlib.import_module(executor)
@@ -172,17 +177,27 @@ class ExperimentActionController(object):
                 if "errors" in experiment_action.metadata_json else True
             assert sucessfully_sent or correct_error_count, "neither success nor extra error recorded"
 
+    def validate_new_actions(self):
+        self.load_validator_fn('creation')(self.db_session)
+
+    def validate_execute_actions(self):
+        self.load_validator_fn('execution')(self.db_session)
+
     def run(self):
         logging.info(f"Starting run at {datetime.datetime.utcnow()}")
 
         if self.enable_create_actions:
             new_actions = self.create_new_actions()
             logging.info(f'New actions created: {len(new_actions)}')
+            self.validate_new_actions()
+            logging.info(f'New actions validated')
 
         if self.enable_execute_actions:
             incomplete_actions = self.find_incomplete_actions()
             action_fatalities = self.execute_actions(incomplete_actions)
             logging.info(f'Action fatalities were: {action_fatalities}')
+            self.validate_execute_actions()
+            logging.info(f'Execute actions validated')
 
         logging.info(f"Ended run at {datetime.datetime.utcnow()}")
 

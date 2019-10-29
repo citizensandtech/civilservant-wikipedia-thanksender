@@ -105,8 +105,9 @@ def _create_new_user(db, lang, new_user, intervention_name, intervention_type, c
                                    user_registration=new_user['user_registration'],
                                    metadata_json={'creation_type': creation_type})
 
-    # db.add(wikipedia_user)
-    # db.commit()
+    # wikipedia user needs to be created here because we need the id and created_dt to insert into the experiment thing
+    db.add(wikipedia_user)
+    db.commit()
     # check if the creation_type is desired. this is for compatibility with pywikibot's welcome.py
     # there are 4 creation types: create, create2, autocreate, byemail
     # https://www.mediawiki.org/wiki/Manual:User_creation
@@ -129,7 +130,8 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
                                                                                                  config)
     randomization_arm_obfuscated = _obfuscated_randomization_arm(db, experiment_id, randomization_arm)
     # 2. store the randomizaiton and user in an ET.
-    wu_sync_object = wikipedia_user.to_json()
+    wu_sync_object = wikipedia_user.to_insertable_dict()
+
 
     experiment_thing = ExperimentThing(id=f'user:{lang}:{wikipedia_user.user_name}',
                                        thing_id=wu_id,
@@ -140,7 +142,7 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
                                        randomization_condition='welcome',
                                        metadata_json={"randomization_block_id": randomization_block_id,
                                                       "randomization_index": randomization_index,
-                                                      "sync_object":wu_sync_object})
+                                                      "sync_object": wu_sync_object})
     # 3. create an action based on the randomization and user, and new mentor.
     signer = random.choice(volunteer_signing_users)
 
