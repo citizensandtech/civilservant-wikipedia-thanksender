@@ -6,6 +6,7 @@ from civilservant.wikipedia.queries.sites import get_new_users, get_volunteer_si
 from civilservant.models.core import Experiment, ExperimentThing, ExperimentAction
 from civilservant.models.wikipedia import WikipediaUser
 from civilservant.util import ThingType, PlatformType
+from thanks.utils import _get_experiment_id
 
 import civilservant.logs
 from sqlalchemy import func, desc
@@ -160,10 +161,6 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
                                                         "lang": lang,
                                                         "user_name": wikipedia_user.user_name})
     return wikipedia_user, experiment_thing, experiment_action
-
-
-def _get_experiment_id(db, experiment_name):
-    return db.query(Experiment.id).filter_by(name=experiment_name).one()
 
 
 def _get_num_experiment_things(db, experiment_id):
