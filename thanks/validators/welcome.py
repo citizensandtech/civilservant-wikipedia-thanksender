@@ -39,9 +39,10 @@ def post_execution_validators(db, config):
     experiment_id = _get_experiment_id(db, config['name'])
     num_recent = 10
     frac_threshhold = 0.5
-    recent_eas = db.query(ExperimentAction) \
-        .filter(ExperimentThing.experiment_id == experiment_id) \
-        .order_by(desc(ExperimentAction.created_dt)).limit(num_recent).all()
+    recent_eas_q = db.query(ExperimentAction) \
+        .filter(ExperimentAction.experiment_id == experiment_id) \
+        .order_by(desc(ExperimentAction.created_dt))
+    recent_eas = recent_eas_q.limit(num_recent).all()
     recent_completed_eas = [ea for ea in recent_eas if 'action_complete' in ea.metadata_json]
     recent_completed_true_eas = [ea for ea in recent_completed_eas if ea.metadata_json['action_complete'] == True]
     frac_complete = len(recent_completed_true_eas) / num_recent
@@ -55,7 +56,7 @@ def post_execution_validators(db, config):
     null_eas = db.query(ExperimentAction) \
         .filter(ExperimentAction.experiment_id == experiment_id) \
         .filter(ExperimentAction.metadata_json['action_complete'] == None).all()
-    if len(null_eas) < 10:
+    if len(null_eas) > 10:
         logging.critical(f'Actions dont seem to be executing fast enough')
         # raise LikelyActionCompletionError
     else:
