@@ -31,8 +31,6 @@ def post_creation_validators(db, config):
     else:
         logging.info('There were ETs created in the last hour.')
 
-    #Dummy critical call.
-    logging.critical("RAISE THE ALARMS")
     # 1. Every recent ET has an EA.
     #TODO: implement this validation.
 
