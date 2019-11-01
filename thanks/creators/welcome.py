@@ -113,7 +113,8 @@ def _create_new_user(db, lang, new_user, intervention_name, intervention_type, c
     # there are 4 creation types: create, create2, autocreate, byemail
     # https://www.mediawiki.org/wiki/Manual:User_creation
     logging.debug(f'Created WikipediaUser {wikipedia_user.user_name}, with creation_type {creation_type}')
-    if creation_type in ['create', 'autocreate']:
+    # if creation_type in ['create', 'autocreate']:
+    if creation_type in ['create']:
         return _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name, intervention_type, config,
                                                 volunteer_signing_users)
     else:
