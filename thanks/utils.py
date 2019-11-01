@@ -16,6 +16,12 @@ class MaxInterventionAttemptsExceededError(Exception):
 class LikelyDataError(Exception):
     pass
 
+class LikelyActionCompletionError(Exception):
+    pass
+
+class ImplausibleNoRecentRegistrationsError(Exception):
+    pass
+
 
 def _get_experiment_id(db, experiment_name):
     return db.query(Experiment.id).filter_by(name=experiment_name).one()

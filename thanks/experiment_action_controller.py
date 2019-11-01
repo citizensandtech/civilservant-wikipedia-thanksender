@@ -178,10 +178,10 @@ class ExperimentActionController(object):
             assert sucessfully_sent or correct_error_count, "neither success nor extra error recorded"
 
     def validate_new_actions(self):
-        self.load_validator_fn('creation')(self.db_session)
+        self.load_validator_fn('creation')(self.db_session, self.config)
 
     def validate_execute_actions(self):
-        self.load_validator_fn('execution')(self.db_session)
+        self.load_validator_fn('execution')(self.db_session, self.config)
 
     def run(self):
         logging.info(f"Starting run at {datetime.datetime.utcnow()}")

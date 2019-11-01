@@ -3,7 +3,8 @@ from civilservant.models.core import ExperimentThing, ExperimentAction
 import civilservant.logs
 from sqlalchemy import desc
 
-from thanks.utils import _get_experiment_id, LikelyDataError
+from thanks.utils import _get_experiment_id, LikelyDataError, ImplausibleNoRecentRegistrationsError, \
+    LikelyActionCompletionError
 
 civilservant.logs.initialize()
 import logging
@@ -23,13 +24,17 @@ def post_creation_validators(db, config):
     last_hour_ets = db.query(ExperimentThing) \
         .filter(ExperimentThing.experiment_id == experiment_id) \
         .filter(ExperimentThing.created_dt >= hour_ago).all()
+
     if len(last_hour_ets) == 0:
-        logging.info('There were no ETs created in the last hour')
+        logging.critical('There were no ETs created in the last hour')
+        # raise ImplausibleNoRecentRegistrationsError
     else:
         logging.info('There were ETs created in the last hour.')
 
+    #Dummy critical call.
+    logging.critical("RAISE THE ALARMS")
     # 1. Every recent ET has an EA.
-
+    #TODO: implement this validation.
 
 def post_execution_validators(db, config):
     # 0. most 10 recent EAs are >50% action completed=TRUE
@@ -38,18 +43,22 @@ def post_execution_validators(db, config):
     frac_threshhold = 0.5
     recent_eas = db.query(ExperimentAction) \
         .filter(ExperimentThing.experiment_id == experiment_id) \
-        .order(desc(ExperimentAction.created_dt)).limit(num_recent).all()
+        .order_by(desc(ExperimentAction.created_dt)).limit(num_recent).all()
     recent_completed_eas = [ea for ea in recent_eas if 'action_complete' in ea.metadata_json]
     recent_completed_true_eas = [ea for ea in recent_completed_eas if ea.metadata_json['action_complete'] == True]
     frac_complete = len(recent_completed_true_eas) / num_recent
     if frac_complete < frac_threshhold:
-        logging.info(f'Only {frac_complete} of last {num_recent} ExperimentActions were completed successfully.')
+        logging.critical(f'Only {frac_complete} of last {num_recent} ExperimentActions were completed successfully.')
+        # raise LikelyActionCompletionError
     else:
         logging.info(f'Good. {frac_complete} of last {num_recent} ExperimentActions were completed successfully.')
 
     # 1. no more than 10 action_completed is NULL
     null_eas = db.query(ExperimentAction) \
         .filter(ExperimentAction.experiment_id == experiment_id) \
-        .filter(ExperimentAction.metadata_json['action_complete'] == None)
-    assert len(null_eas) < 10, LikelyDataError
-    return True
+        .filter(ExperimentAction.metadata_json['action_complete'] == None).all()
+    if len(null_eas) < 10:
+        logging.critical(f'Actions dont seem to be executing fast enough')
+        # raise LikelyActionCompletionError
+    else:
+        logging.info(f'There is no large action completion backlog')
