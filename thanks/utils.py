@@ -23,5 +23,8 @@ class ImplausibleNoRecentRegistrationsError(Exception):
     pass
 
 
-def _get_experiment_id(db, experiment_name):
-    return db.query(Experiment.id).filter_by(name=experiment_name).one()
+def _get_experiment_id(db, experiment_name, return_id=False):
+    res = db.query(Experiment.id).filter_by(name=experiment_name).one()
+    if return_id:
+        res = res.id
+    return res

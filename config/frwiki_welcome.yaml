@@ -22,4 +22,12 @@ message_settings:
 dirs:
   project: /data/project/frwelcome
   randomizations: randomizations
+  reports: reports
+
+reports:
+  email_subject: "fr welcome"
+  from_addr: 'system.operations@civilservant.io'
+  to_addrs:
+    - max.klein@civilservant.io
+    - julia.kamin@civilservant.io
 
