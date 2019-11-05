@@ -1,5 +1,4 @@
 from thanks.periodic_report import EmailReport
-from thanks.utils import _get_experiment_id
 import datetime
 
 
@@ -23,11 +22,12 @@ class WelcomeReport(EmailReport):
                             and created_dt <= %(end_date)s
                             and created_dt >= %(start_date)s
                             '''
+        twelve_hours_ago = self.now - datetime.timedelta(hours=12)
         query_params = {'experiment_id': self.experiment_id,
-                        'start_date': self.now - datetime.timedelta(hours=12),
+                        'start_date': twelve_hours_ago,
                         'end_date': self.now
                         }
-        query_description = f'''Experiment actions created in the last 12 hours.'''
+        query_description = f'''Experiment actions created in the last between {twelve_hours_ago} and {self.now()}.'''
         subject_stat_fn = lambda df: f'{len(df)} new users welcomed in last 12 hours'
         self.add_query(query_name=query_name,
                        query_sql=query_sql,
