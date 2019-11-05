@@ -15,8 +15,8 @@ class WelcomeReport(EmailReport):
         query_sql = '''select created_dt,
                               json_unquote(metadata_json->'$.lang') as lang, 
                               json_unquote(metadata_json->'$.user_name') as user_name,
-                              concat('https://fr.wikipedia.org/wiki/',
-                                  json_unquote(metadata_json->'$.action_response.edit.title')) as invite_link
+                              replace(concat('https://fr.wikipedia.org/wiki/',
+                                  json_unquote(metadata_json->'$.action_response.edit.title')), ' ', '_') as invite_link
                             from core_experiment_actions 
                             where experiment_id=%(experiment_id)s
                             and created_dt <= %(end_date)s
@@ -27,7 +27,7 @@ class WelcomeReport(EmailReport):
                         'start_date': twelve_hours_ago,
                         'end_date': self.now
                         }
-        query_description = f'''Experiment actions created in the last between {twelve_hours_ago} and {self.now()}.'''
+        query_description = f'''Experiment actions created in the last between {twelve_hours_ago} and {self.now}.'''
         subject_stat_fn = lambda df: f'{len(df)} new users welcomed in last 12 hours'
         self.add_query(query_name=query_name,
                        query_sql=query_sql,

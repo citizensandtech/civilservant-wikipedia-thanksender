@@ -26,7 +26,7 @@ def post_creation_validators(db, config):
         .filter(ExperimentThing.created_dt >= hour_ago).all()
 
     if len(last_hour_ets) == 0:
-        logging.critical('There were no ETs created in the last hour')
+        logging.critical(f'There were no ETs created in the last hour (since {hour_ago})')
         # raise ImplausibleNoRecentRegistrationsError
     else:
         logging.info('There were ETs created in the last hour.')
@@ -47,7 +47,7 @@ def post_execution_validators(db, config):
     recent_completed_true_eas = [ea for ea in recent_completed_eas if ea.metadata_json['action_complete'] == True]
     frac_complete = len(recent_completed_true_eas) / num_recent
     if frac_complete < frac_threshhold:
-        logging.critical(f'Only {frac_complete} of last {num_recent} ExperimentActions were completed successfully.')
+        logging.critical(f'Only {frac_complete} proportion of last {num_recent} ExperimentActions were completed successfully.')
         # raise LikelyActionCompletionError
     else:
         logging.info(f'Good. {frac_complete} of last {num_recent} ExperimentActions were completed successfully.')
@@ -57,7 +57,7 @@ def post_execution_validators(db, config):
         .filter(ExperimentAction.experiment_id == experiment_id) \
         .filter(ExperimentAction.metadata_json['action_complete'] == None).all()
     if len(null_eas) > 10:
-        logging.critical(f'Actions dont seem to be executing fast enough')
+        logging.critical(f'Actions dont seem to be executing fast enough. There are still {len(null_eas)} Null Experiment Actions.')
         # raise LikelyActionCompletionError
     else:
         logging.info(f'There is no large action completion backlog')
