@@ -39,18 +39,23 @@ class EmailReport:
         self.queries = {}
         self.to_addrs = self.config['reports']['to_addrs']
         self.from_addr = self.config['reports']['from_addr']
+        self.subject_stat = None
 
-    def add_query(self, query_name, query_sql, query_params, query_description):
+    def add_query(self, query_name, query_sql, query_params, query_description, subject_stat_fn=None):
         self.queries[query_name] = {}
         self.queries[query_name]['sql_f'] = query_sql
         self.queries[query_name]['sql_params'] = query_params
         self.queries[query_name]['description'] = query_description
+        self.queries[query_name]['stat_fn'] = subject_stat_fn
 
     def run_queries(self):
         for query_name, query_parts in self.queries.items():
             query_sql_params = query_parts['sql_params']
             query_sql = query_parts['sql_f']
             df = pd.read_sql(sql=query_sql, con=self.db_engine, params=query_sql_params)
+            query_subject_stat_fn = query_parts['stat_fn'] if 'stat_fn' in query_parts else None
+            if query_subject_stat_fn:
+                self.subject_stat = query_subject_stat_fn(df)
             logging.info(f"completed {query_name} query")
             f_name = f'{query_name}_{self.date}.csv'
             outfile = os.path.join(self.csv_dir, f_name)
@@ -62,7 +67,9 @@ class EmailReport:
     def send_email(self):
         COMMASPACE = ', '
         email_subject_title = self.config['reports']['email_subject']
-        email_subject = f"{email_subject_title} for {self.date}"
+        if self.subject_stat:
+            subject_prefix = f'{self.subject_stat} | '
+        email_subject = f"{subject_prefix}{email_subject_title} for {self.date}"
         msg = MIMEMultipart()
         msg['From'] = self.from_addr
         msg['To'] = COMMASPACE.join(self.to_addrs)
