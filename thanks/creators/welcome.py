@@ -1,5 +1,6 @@
 import math
 import random
+from datetime import timedelta
 
 from civilservant.wikipedia.connections.api import get_mwapi_session, get_auth
 from civilservant.wikipedia.queries.sites import get_new_users, get_volunteer_signing_users
@@ -191,6 +192,10 @@ def _obfuscated_randomization_arm(db, experiment_id, randomization_arm):
 
 
 def _get_last_registration_of_last_onboarded_user(db, experiment_id):
-    latest_et = db.query(ExperimentThing).filter_by(experiment_id=experiment_id) \
-        .order_by(desc(ExperimentThing.created_dt)).limit(1).one_or_none()
-    return latest_et.created_dt if latest_et else None
+    latest_wu = db.query(WikipediaUser).order_by(desc(WikipediaUser.user_registration)).limit(1).one_or_none()
+    # logging.debug(f'Latest ET cr {latest_et.created_dt}, Latest WU reg {latest_wu.user_registration}')
+    if not latest_wu:
+        return None
+    else:
+        latest_wu_padded = latest_wu.user_registration - timedelta(minutes=1)
+        return latest_wu_padded

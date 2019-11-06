@@ -158,7 +158,7 @@ class ExperimentActionController(object):
             experiment_action.metadata_json['errors'] = prev_errors
         except Exception as e:
             # network error
-            logging.exception(f"Error sending thanks: {e}")
+            logging.exception(f"Error executing action: {e}")
             next_error = {str(datetime.datetime.utcnow()): str(e)}
             total_errors = prev_errors + [next_error]
             experiment_action.metadata_json['errors'] = total_errors
