@@ -3,3 +3,5 @@
 datatransfer/*
 lib/*
 *.env*
+*.egg-info
+thanks/reports/*.csv
