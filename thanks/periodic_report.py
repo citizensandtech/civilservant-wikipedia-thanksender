@@ -41,22 +41,47 @@ class EmailReport:
         self.from_addr = self.config['reports']['from_addr']
         self.subject_stat = None
 
-    def add_query(self, query_name, query_sql, query_params, query_description, subject_stat_fn=None):
+    def add_query(self, query_name, query_sql, query_params, query_description, subject_stat_fn=None,
+                  post_exec_fn=None):
+        """
+        add a query to be process
+        :param query_name: a unique name for this query
+        :param query_sql: the sql to execute with %()s param placeholders
+        :param query_params: dict of params to put in the placeholdesr
+        :param query_description: natural language explanation of query to put in email
+        :param subject_stat_fn: a fn of the result df to prepend to email title (one per report)
+        :param post_exec_fn: a df-->df fn to execute after the sql executes
+        :return:
+        """
         self.queries[query_name] = {}
         self.queries[query_name]['sql_f'] = query_sql
         self.queries[query_name]['sql_params'] = query_params
         self.queries[query_name]['description'] = query_description
         self.queries[query_name]['stat_fn'] = subject_stat_fn
+        self.queries[query_name]['post_exec_fn'] = post_exec_fn
 
     def run_queries(self):
+        """
+        runs all the queries and put their results back in to self.queries dict with 'outfile' and 'html' keys
+        :return:
+        """
         for query_name, query_parts in self.queries.items():
             query_sql_params = query_parts['sql_params']
             query_sql = query_parts['sql_f']
             df = pd.read_sql(sql=query_sql, con=self.db_engine, params=query_sql_params)
+            logging.info(f"completed {query_name} query")
+
+            # run a python post processor if specified
+            post_exec_fn = query_parts['post_exec_fn'] if 'post_exec_fn' in query_parts else None
+            if post_exec_fn:
+                df = post_exec_fn(df)
+
+            # make a summary stat if specified
             query_subject_stat_fn = query_parts['stat_fn'] if 'stat_fn' in query_parts else None
             if query_subject_stat_fn:
                 self.subject_stat = query_subject_stat_fn(df)
-            logging.info(f"completed {query_name} query")
+
+            # output a CSV version of the result
             f_name = f'{query_name}_{self.date}.csv'
             outfile = os.path.join(self.csv_dir, f_name)
             self.queries[query_name]['fname'] = f_name
