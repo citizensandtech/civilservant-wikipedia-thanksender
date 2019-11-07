@@ -38,7 +38,7 @@ class ExperimentActionController(object):
        - list of dicts --> {dt: errorstr} #TODO if uncaught error have a dict that contains the stracktrace etc.
     """
 
-    def __init__(self, lang=None, dry_run=True, enable_create_actions=True,
+    def __init__(self, lang=None, dry_run=False, enable_create_actions=True,
                  enable_execute_actions=True):
         self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', 2))
         logging.info(f"Survey batch size set to : {self.batch_size}")
