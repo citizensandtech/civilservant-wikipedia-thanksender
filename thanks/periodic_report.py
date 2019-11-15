@@ -33,7 +33,8 @@ class EmailReport:
         self.config = read_config_file(os.environ['CS_EXTRA_CONFIG_FILE'], __file__)
         self.db_engine = init_engine()
         self.db_session = init_session()
-        self.experiment_id = _get_experiment_id(self.db_session, self.config['name'], return_id=True)
+        if 'name' in self.config.keys():
+            self.experiment_id = _get_experiment_id(self.db_session, self.config['name'], return_id=True)
         self.csv_dir = os.path.join(self.config["dirs"]['project'], self.config["dirs"]['reports'])
         self.date = datetime.datetime.today().strftime('%Y%m%d')
         self.queries = {}
@@ -92,6 +93,7 @@ class EmailReport:
     def send_email(self):
         COMMASPACE = ', '
         email_subject_title = self.config['reports']['email_subject']
+        subject_prefix = ''
         if self.subject_stat:
             subject_prefix = f'{self.subject_stat} | '
         email_subject = f"{subject_prefix}{email_subject_title} for {self.date}"

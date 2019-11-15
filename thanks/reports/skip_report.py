@@ -7,6 +7,7 @@ class SkipReport(EmailReport):
         super().__init__()
 
         self.now = datetime.datetime.utcnow()
+        self.today = datetime.date.today()
         self.add_skip_stats()
 
     def add_skip_stats(self):
@@ -39,12 +40,12 @@ class SkipReport(EmailReport):
                     on thankees.lang = skip_counts.lang and thankees.user_name=skip_counts.user_name;
                 '''
         query_params = {}
-        query_description = f'''Skipping statisitscis.'''
+        query_description = f'''Skipping statistics for thankees onboarded in the last 90 days. How often they were skipped.'''
 
         def skip_post_exec_fn(df):
             df['newcomer'] = df['user_experience_level'].apply(lambda uel: uel == '0')
             df = df[df['lang'] != 'en']
-            ninety_days_ago = self.now - datetime.timedelta(days=90)
+            ninety_days_ago = self.today - datetime.timedelta(days=90)
             recent_df = df[df['onboard_date'] >= ninety_days_ago]
             groups = recent_df.groupby(['lang', 'user_completed', 'newcomer'])
 
