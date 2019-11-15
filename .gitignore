@@ -9,3 +9,9 @@ logs/
 thanks/__pycache__/
 
 thanks/creators/__pycache__/
+
+thanks/executors/__pycache__/
+
+thanks/validators/__pycache__/
+
+ipython/\.ipynb_checkpoints/
