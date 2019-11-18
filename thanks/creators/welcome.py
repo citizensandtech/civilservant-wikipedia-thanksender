@@ -135,7 +135,6 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
     # 2. store the randomizaiton and user in an ET.
     wu_sync_object = wikipedia_user.to_insertable_dict()
 
-
     experiment_thing = ExperimentThing(id=f'user:{lang}:{wikipedia_user.user_name}',
                                        thing_id=wu_id,
                                        experiment_id=experiment_id,
@@ -145,7 +144,8 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
                                        randomization_condition='welcome',
                                        metadata_json={"randomization_block_id": randomization_block_id,
                                                       "randomization_index": randomization_index,
-                                                      "sync_object": wu_sync_object})
+                                                      "sync_object": wu_sync_object},
+                                       syncable=True)
     # 3. create an action based on the randomization and user, and new mentor.
     signer = random.choice(volunteer_signing_users)
 
