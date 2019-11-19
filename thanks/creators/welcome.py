@@ -197,5 +197,5 @@ def _get_last_registration_of_last_onboarded_user(db, experiment_id):
     if not latest_wu:
         return None
     else:
-        latest_wu_padded = latest_wu.user_registration - timedelta(minutes=1)
+        latest_wu_padded = latest_wu.user_registration - timedelta(minutes=5)
         return latest_wu_padded
