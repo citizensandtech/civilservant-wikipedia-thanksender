@@ -20,7 +20,8 @@ def post_creation_validators(db, config):
     experiment_id = _get_experiment_id(db, config['name'])
     now = datetime.datetime.utcnow()
     # 0. There was an ET in the last hour.
-    hour_ago = now - datetime.timedelta(hours=1)
+    no_ets_is_a_problem_hours = config['validators']['no_ets_is_a_problem_hours']
+    hour_ago = now - datetime.timedelta(hours=no_ets_is_a_problem_hours)
     last_hour_ets = db.query(ExperimentThing) \
         .filter(ExperimentThing.experiment_id == experiment_id) \
         .filter(ExperimentThing.created_dt >= hour_ago).all()
@@ -29,7 +30,7 @@ def post_creation_validators(db, config):
         logging.critical(f'There were no ETs created in the last hour (since {hour_ago})')
         # raise ImplausibleNoRecentRegistrationsError
     else:
-        logging.info('There were ETs created in the last hour.')
+        logging.info(f'There were ETs created in the last {no_ets_is_a_problem_hours} hours.')
 
     # 1. Every recent ET has an EA.
     #TODO: implement this validation.

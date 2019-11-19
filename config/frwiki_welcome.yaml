@@ -32,3 +32,5 @@ reports:
     - julia.kamin@civilservant.io
     - eric.pennington@civilservant.io
 
+validators:
+  no_ets_is_a_problem_hours: 2
