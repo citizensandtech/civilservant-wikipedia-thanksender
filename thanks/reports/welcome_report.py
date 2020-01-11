@@ -13,6 +13,7 @@ class WelcomeReport(EmailReport):
     def add_12_hourly(self):
         query_name = '12 hourly report'
         query_sql = '''select created_dt,
+                              json_unquote(metadata_json->'$."randomization_arm"') as randomization_arm, 
                               json_unquote(metadata_json->'$.lang') as lang, 
                               json_unquote(metadata_json->'$.user_name') as user_name,
                               replace(concat('https://fr.wikipedia.org/wiki/',
