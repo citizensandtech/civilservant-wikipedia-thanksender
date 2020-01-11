@@ -165,6 +165,9 @@ class ExperimentActionController(object):
             if isinstance(e, mwapi.errors.APIError):
                 if e.code in ['invalidrecipient', 'blocked']:
                     experiment_action.metadata_json['action_complete'] = False
+                elif e.code in ['readonly']:
+                    # exponential backoff if in readonly mode
+                    time.sleep(10 ** total_errors)
             logging.info(f"Total errors are: {total_errors}, max_send_errors are {self.max_send_errors}")
             if len(total_errors) > self.max_send_errors:
                 experiment_action.metadata_json['action_complete'] = False
