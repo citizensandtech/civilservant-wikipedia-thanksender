@@ -9,8 +9,11 @@ verify_ssl = true
 civilservant = "*"
 docutils = "==0.15"
 civilservant-core = {editable = true,git = "https://github.com/mitmedialab/civilservantlib"}
-civilservant-wikipedia = {editable = true,git = ""}
+civilservant-wikipedia = {editable = true,git = "https://github.com/mitmedialab/civilservantlib-wikipedia"}
+civilservant-api = {editable = true,git = "https://github.com/mitmedialab/civilservantlib-api"}
+civilservant-thankssender = {path = "."}
 pyyaml = "*"
+airbrake = "==1.3.3"
 
 [requires]
 python_version = "3.7"
