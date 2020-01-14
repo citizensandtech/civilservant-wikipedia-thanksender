@@ -66,7 +66,10 @@ def welcome(db, batch_size, lang, intervention_name, intervention_type, config):
             if experiment_action:
                 db.add(experiment_action)
                 new_actions.append(experiment_action)
-            db.commit()
+            try:
+                db.commit()
+            except Exception as e:
+                logging.critical(f'Error in db commit of ET/EAs. {e}')
         return new_actions
 
 
@@ -148,7 +151,6 @@ def _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name
                                        syncable=True)
     # 3. create an action based on the randomization and user, and new mentor.
     signer = random.choice(volunteer_signing_users)
-
     experiment_action = ExperimentAction(experiment_id=experiment_id,
                                          action_object_id=wu_id,
                                          action_object_type=ThingType.WIKIPEDIA_USER,
