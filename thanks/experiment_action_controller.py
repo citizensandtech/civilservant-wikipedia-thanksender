@@ -168,6 +168,9 @@ class ExperimentActionController(object):
                 elif e.code in ['readonly']:
                     # exponential backoff if in readonly mode
                     time.sleep(10 ** total_errors)
+            elif isinstance(e, mwapi.errors.TimeoutError):
+                time.sleep(10 ** total_errors)
+
             logging.info(f"Total errors are: {total_errors}, max_send_errors are {self.max_send_errors}")
             if len(total_errors) > self.max_send_errors:
                 experiment_action.metadata_json['action_complete'] = False
