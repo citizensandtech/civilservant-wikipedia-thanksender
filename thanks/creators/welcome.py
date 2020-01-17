@@ -118,7 +118,7 @@ def _create_new_user(db, lang, new_user, intervention_name, intervention_type, c
     # https://www.mediawiki.org/wiki/Manual:User_creation
     logging.debug(f'Created WikipediaUser {wikipedia_user.user_name}, with creation_type {creation_type}')
     # if creation_type in ['create', 'autocreate']:
-    if creation_type in ['create']:
+    if creation_type in config['settings']['creation_types']:
         return _create_experiment_thing_actions(db, lang, wikipedia_user, intervention_name, intervention_type, config,
                                                 volunteer_signing_users)
     else:

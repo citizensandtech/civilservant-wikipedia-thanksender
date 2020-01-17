@@ -12,6 +12,7 @@ settings:
   randomizations_file: fr-randomziation-20191015-100000-60upb.split.noindex.json
   units_per_block: 60
   randomization_obfuscations_file: fr-obfuscations.json
+  creation_types: ['create']
 
 message_settings:
   seciton: null
