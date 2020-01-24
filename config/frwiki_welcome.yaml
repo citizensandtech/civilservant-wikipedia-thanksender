@@ -6,11 +6,9 @@ end_dt: 2020-09-23
 settings:
   intervention_name: *name
   intervention_type: 'welcome'
-#  randomizations_file: fr-dummy-randomziation-20190924-100000.json
-#  randomizations_file: fr-dummy-randomziation-20190924-10000.json
-#  randomizations_file: fr-dummy-randomziation-20190924-100000.split.noindex.json
-  randomizations_file: fr-randomziation-20191015-100000-60upb.split.noindex.json
-  units_per_block: 60
+#  randomizations_file: fr-randomziation-20191015-100000-60upb.split.noindex.json
+  randomizations_file: fr-randomziation-20200124-100000-6upb.split.noindex.json
+  units_per_block: 6
   randomization_obfuscations_file: fr-obfuscations.json
   creation_types: ['create']
 
