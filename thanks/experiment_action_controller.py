@@ -56,7 +56,7 @@ class ExperimentActionController(object):
         self.intervention_type = os.environ['CS_WIKIPEDIA_INTERVENTION_TYPE']
         self.intervention_name = os.environ['CS_WIKIPEDIA_INTERVENTION_NAME']
         self.api_con = None  # a slot for a connection or session to keep open between different phases.
-        self.dry_run = bool(os.getenv('CS_DRY_RUN', False))
+        self.dry_run = bool(int(os.getenv('CS_DRY_RUN', False)))
         self.enable_create_actions = enable_create_actions
         self.enable_execute_actions = enable_execute_actions
 
