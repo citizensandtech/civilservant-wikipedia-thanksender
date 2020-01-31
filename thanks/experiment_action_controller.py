@@ -44,6 +44,7 @@ class ExperimentActionController(object):
     def __init__(self, lang=None, enable_create_actions=True,
                  enable_execute_actions=True):
         self.config = read_config_file(os.environ['CS_EXTRA_CONFIG_FILE'], __file__)
+        # self.config = read_config_file(os.environ['CS_EXTRA_CONFIG_FILE'], __file__) #consider changing to os.path.abspath('')
         self.batch_size = int(os.getenv('CS_WIKIPEDIA_ACTION_BATCH_SIZE', 2))
         logging.info(f"Survey batch size set to : {self.batch_size}")
         self.db_session = init_session()
