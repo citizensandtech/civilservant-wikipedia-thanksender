@@ -1,0 +1,7 @@
+setup.cfg
+setup.py
+civilservant_thankssender.egg-info/PKG-INFO
+civilservant_thankssender.egg-info/SOURCES.txt
+civilservant_thankssender.egg-info/dependency_links.txt
+civilservant_thankssender.egg-info/requires.txt
+civilservant_thankssender.egg-info/top_level.txt
