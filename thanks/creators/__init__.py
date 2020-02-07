@@ -30,10 +30,10 @@ class BaseSurvey():
         :return: new_actions a list of orm objects of added users, continuation information
         """
         self.db = db
-        self.batch_size = batch_size,
-        self.lang = lang,
-        self.intervention_name = intervention_name,
-        self.intervention_type = intervention_type,
+        self.batch_size = batch_size
+        self.lang = lang
+        self.intervention_name = intervention_name
+        self.intervention_type = intervention_type
         self.config = config
         self.experiment_name = self.config['name']
         self.experiment_id = _get_experiment_id(self.db, self.experiment_name, return_id=True)
@@ -57,6 +57,7 @@ class BaseSurvey():
 
         # create EAS and store them in self.new_actions
         survey_experiment_actions = self._create_survey_experiment_actions(users_needing_survey, self.extra_metadata_fields)
+        self.new_actions.extend(survey_experiment_actions)
 
         return self.new_actions
 

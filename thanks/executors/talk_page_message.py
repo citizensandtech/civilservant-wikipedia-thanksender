@@ -16,6 +16,7 @@ def get_template_and_fill(action, intervention_name):
     lang = action.metadata_json['lang']
     template_base_dir = os.environ['CS_WIKIPEDIA_TEMPLATE_DIR']
     template_dir = os.path.join(template_base_dir, intervention_name)
+    # _summary defines what the
     template_dir_summary = os.path.join(template_base_dir, intervention_name + '_summary')
     templates = os.listdir(template_dir)
     templates_summary = os.listdir(template_dir_summary)
@@ -59,7 +60,7 @@ def talk_page_message(action, intervention_name, intervention_type, api_con, dry
     # first test to see if the control arm is set to do nothing. as in don't message anyone.
     control_action_is_skip = config['control_action_is_skip'] if 'control_action_is_skip' in config else False
     if control_action_is_skip:
-        if action.metadata_json['randomization_arm'] == 0:
+        if 'randomization_arm' in action.metadata_json and action.metadata_json['randomization_arm'] == 0:
             logging.debug('Control action is skip is True and randomization_arm is 0, so not sending a message.')
             return True, 'control_action_is_skip'
 

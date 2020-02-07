@@ -125,9 +125,13 @@ class ExperimentActionController(object):
         return action_fatalities
 
     def load_validator_fn(self, creation_or_execution):
-        validator = f'thanks.validators.{self.intervention_name}'
-        validator_module = importlib.import_module(validator)
-        return getattr(validator_module, f'post_{creation_or_execution}_validators')
+        try:
+            validator = f'thanks.validators.{self.intervention_name}'
+            validator_module = importlib.import_module(validator)
+            return getattr(validator_module, f'post_{creation_or_execution}_validators')
+        except ModuleNotFoundError:
+            logging.warning(f'No validator written at {validator}')
+            return lambda db, config: None
 
     def load_action_fn(self):
         executor = f'thanks.executors.{self.intervention_type}'
