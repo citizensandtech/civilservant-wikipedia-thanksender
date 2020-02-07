@@ -54,8 +54,8 @@ class ExperimentActionController(object):
             os.environ['CS_OAUTH_CONSUMER_KEY'],
             os.environ['CS_OAUTH_CONSUMER_SECRET'])
         self.max_send_errors = int(os.getenv('CS_OAUTH_THANKS_MAX_SEND_ERRORS', 5))
-        self.intervention_type = os.environ['CS_WIKIPEDIA_INTERVENTION_TYPE']
-        self.intervention_name = os.environ['CS_WIKIPEDIA_INTERVENTION_NAME']
+        self.intervention_type = self.config['settings']['intervention_type']
+        self.intervention_name = self.config['settings']['intervention_name']
         self.api_con = None  # a slot for a connection or session to keep open between different phases.
         self.dry_run = bool(int(os.getenv('CS_DRY_RUN', False)))
         self.enable_create_actions = enable_create_actions
