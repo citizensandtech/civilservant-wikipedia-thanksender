@@ -7,6 +7,7 @@ class WelcomeReport(EmailReport):
         super().__init__()
 
         self.now = datetime.datetime.utcnow()
+        self.add_errors()
         self.add_12_hourly()
         self.add_total_activity()
 
@@ -35,6 +36,31 @@ class WelcomeReport(EmailReport):
                        query_params=query_params,
                        query_description=query_description,
                        subject_stat_fn=subject_stat_fn)
+
+    def add_errors(self):
+        query_name = 'recent errors'
+        query_sql = '''select created_dt,
+                              json_unquote(metadata_json->'$."randomization_arm"') as randomization_arm,
+                              json_unquote(metadata_json->'$.lang') as lang,
+                              json_unquote(metadata_json->'$.user_name') as user_name,
+                              replace(concat('https://fr.wikipedia.org/wiki/User_talk:',
+                                  json_unquote(metadata_json->'$.user_name')), ' ', '_') as would_be_invite_link,
+                              json_unquote(metadata_json->'$.errors[0]') as error
+                            from core_experiment_actions 
+                            where experiment_id=%(experiment_id)s
+                                and created_dt <= %(end_date)s
+                                and created_dt >= %(start_date)s
+                                and metadata_json->'$.action_complete' is FALSE; '''
+        twelve_hours_ago = self.now - datetime.timedelta(hours=12)
+        query_params = {'experiment_id': self.experiment_id,
+                        'start_date': twelve_hours_ago,
+                        'end_date': self.now
+                        }
+        query_description = f'''Experiment actions in the last hours that resulted in fatal errors.'''
+        self.add_query(query_name=query_name,
+                       query_sql=query_sql,
+                       query_params=query_params,
+                       query_description=query_description)
 
     def add_total_activity(self):
         query_name = 'total_activity'
