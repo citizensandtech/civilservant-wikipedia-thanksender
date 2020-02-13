@@ -21,7 +21,7 @@ class FrenchWelcomePilotSurvey(BaseSurvey):
         self.mwapi_session = get_mwapi_session(lang=lang)
         self.auth = get_auth()
         self.assumed_cron_interval_days = 1
-        self.extra_metadata_fields = []
+        self.extra_metadata_fields = ['public_anonymous_id']
 
     def _get_unsent_survey_recipients(self):
         # we want to get from the API users who registered between
@@ -34,7 +34,11 @@ class FrenchWelcomePilotSurvey(BaseSurvey):
         logging.info(f'Found {len(historic_create_users)} historic create users who were created between'
                      f'{end_time} and {start_time}')
 
-        self.extra_metadata_fields.append('public_anonymous_id')
+        sent_survey_recipients = super()._get_sent_survey_recipient()
+
+        sent_survey_user_names = [ea.metadata_json['user_name'] for ea in sent_survey_recipients]
+
+        historic_create_users = [hcu for hcu in historic_create_users if hcu['user_name'] not in sent_survey_user_names]
 
         for hcu in historic_create_users:
             hcu['public_anonymous_id'] = str(uuid4())

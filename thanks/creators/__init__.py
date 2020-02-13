@@ -56,7 +56,8 @@ class BaseSurvey():
         users_needing_survey = self._batch_trim_users_needing_survey(users_needing_survey)
 
         # create EAS and store them in self.new_actions
-        survey_experiment_actions = self._create_survey_experiment_actions(users_needing_survey, self.extra_metadata_fields)
+        survey_experiment_actions = self._create_survey_experiment_actions(users_needing_survey,
+                                                                           self.extra_metadata_fields)
         self.new_actions.extend(survey_experiment_actions)
 
         return self.new_actions
@@ -70,9 +71,15 @@ class BaseSurvey():
         else:
             return False
 
+    def _get_sent_survey_recipient(self):
+        q = self.db.query(ExperimentAction) \
+            .filter(ExperimentAction.experiment_id == self.experiment_id) \
+            .filter(ExperimentAction.action_subject_type == self.intervention_type) \
+            .filter(ExperimentAction.action_subject_id == self.intervention_name)
+        return q.all()
+
     def _get_unsent_survey_recipients(self):
         raise NotImplementedError
-
 
     def _get_item_or_attr(self, obj, item_or_attr):
         if hasattr(obj, 'metadata_json'):
@@ -88,7 +95,7 @@ class BaseSurvey():
 
             user_name = self._get_item_or_attr(user, 'user_name')
 
-            metadata_json = {"lang":self.lang,
+            metadata_json = {"lang": self.lang,
                              "user_name": user_name}
             for extra_metadata_field in extra_metadata_fields:
                 metadata_json[extra_metadata_field] = self._get_item_or_attr(user, extra_metadata_field)
