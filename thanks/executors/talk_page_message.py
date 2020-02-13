@@ -26,6 +26,7 @@ def get_template_and_fill(action, intervention_name):
     # first try and fill the template
     with open(os.path.join(template_dir, template_lang_f), 'r') as f:
         template_lang = f.read()
+        template_lang = template_lang.strip()
     try:
         template_lang_filled = template_lang.format(**action.metadata_json)
     except KeyError as e:
@@ -35,6 +36,7 @@ def get_template_and_fill(action, intervention_name):
     # second try and fill the summary
     with open(os.path.join(template_dir_summary, template_lang_f_summary), 'r') as f:
         template_lang_summary = f.read()
+        template_lang_summary = template_lang_summary.strip() #in case an editor adds a newline
     try:
         template_lang_summary_filled = template_lang_summary.format(**action.metadata_json)
     except KeyError as e:

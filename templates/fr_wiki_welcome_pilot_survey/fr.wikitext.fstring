@@ -1,5 +1,3 @@
-==Participez à une enquête pour aider Wikipédia ==
-
 Bonjour {user_name} -
 
 Que diriez-vous de prendre 5 minutes pour répondre à un questionnaire sur l’amélioration de Wikipédia ?
@@ -10,7 +8,7 @@ Seriez-vous prêt à aider ? Tout ce que vous aurez à faire est répondre à qu
 
 Nous espérons votre participation pour aider à pérenniser Wikipédia. À la fin de l’enquête, nous vous enverrons un résumé des résultats obtenus avec votre aide.
 
-[https://qualtrics/{public_anonymous_id} Cliquez ici pour participer à l’enquête.]
+[https://cornell.qualtrics.com/jfe/form/SV_cLSKmWG4WDCAfjL?ID={public_anonymous_id} Cliquez ici pour participer à l’enquête.]
 
 Merci ! Nous espérons votre participation !
 

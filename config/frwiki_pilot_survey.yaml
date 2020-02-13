@@ -11,10 +11,10 @@ survey_settings:
   survey_after_days: 84
 
 message_settings:
-  seciton: null
+  seciton: new
   skip_words: ['civilservant', 'loveless', 'bienvenue']
   check_blocked: True
-  check_uncreated: True
+  check_uncreated: False
 
 dirs:
   project: /data/project/frwelcome
