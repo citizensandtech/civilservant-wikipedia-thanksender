@@ -64,7 +64,8 @@ class BaseSurvey():
 
     def _check_survey_sending_already_done(self):
         if 'max_surveys' in self.config['survey_settings'].keys():
-            num_experiment_actions = _get_num_experiment_actions(self.db, action=self.intervention_name)
+            num_experiment_actions = _get_num_experiment_actions(self.db, experiment_id=self.experiment_id,
+                                                                 action_subject_id=self.intervention_name)
             if num_experiment_actions >= self.config['survey_settings']['max_surveys']:
                 logging.info('Already sent maximum surveys, nothing to do')
                 return True

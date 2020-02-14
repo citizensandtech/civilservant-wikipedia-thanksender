@@ -9,6 +9,7 @@ settings:
 
 survey_settings:
   survey_after_days: 84
+  max_surveys: 6000
 
 message_settings:
   seciton: new
