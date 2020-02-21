@@ -23,7 +23,7 @@ class WelcomeReport(EmailReport):
                               and action_subject_type='page_text_check'
                             and created_dt <= %(end_date)s
                             and created_dt >= %(start_date)s
-                            order by survey_sent desc;
+                            order by control_not_accidentally_treated desc;
                             '''
         n_hours_ago = self.now - datetime.timedelta(hours=24)
         query_params = {'experiment_id': self.experiment_id,
