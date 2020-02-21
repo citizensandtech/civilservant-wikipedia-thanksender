@@ -14,8 +14,9 @@ survey_settings:
 message_settings:
   seciton: new
   skip_words: # its sort of the opposit of a skip word in this context but i'm going to keep the name
-    - "[[Wikipédia:Forum des nouveaux|forum des nouveaux]]"
     - "et je vous accueille en tant que wikipédien"
+    - "{{Bienvenue}}"
+    - "Wikipédia est une formidable aventure collective, toujours en construction."
   check_blocked: True
   check_uncreated: False
 
