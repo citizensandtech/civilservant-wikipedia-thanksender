@@ -41,6 +41,7 @@ class BaseSurvey():
         self.survey_after_days = self.config['survey_settings']['survey_after_days']
         self.action_latest_date = self.now - datetime.timedelta(days=self.survey_after_days)
         self.new_actions = []
+        self.extra_metadata_fields = []
 
     def run(self):
         logging.info(f'Starting to run the survey creator at {self.now}')
@@ -109,6 +110,7 @@ class BaseSurvey():
                                                  action_platform=PlatformType.WIKIPEDIA,
                                                  # action_key_id=randomization_arm,
                                                  action=self.intervention_type,
+                                                 # this is the intervention type duplicate that might go away.
                                                  metadata_json=metadata_json)
             experiment_actions.append(experiment_action)
         self.db.add_all(experiment_actions)

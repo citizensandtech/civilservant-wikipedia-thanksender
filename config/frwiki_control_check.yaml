@@ -1,0 +1,33 @@
+name: &name 'fr_wiki_welcome'
+controller: experiment_action_controller
+control_action_is_skip: True # means that randomization_arm=0 is to do nothing.
+start_dt: 2019-09-23
+end_dt: 2020-09-23
+settings:
+  intervention_name: fr_wiki_control_check
+  intervention_type: 'page_text_check'
+
+survey_settings:
+  # maybe this var is poorly named for control check, but i want to see if they were welcomed after 3 days.
+  survey_after_days: 3
+
+message_settings:
+  seciton: new
+  skip_words: # its sort of the opposit of a skip word in this context but i'm going to keep the name
+    - "[[Wikipédia:Forum des nouveaux|forum des nouveaux]]"
+    - "et je vous accueille en tant que wikipédien"
+  check_blocked: True
+  check_uncreated: False
+
+dirs:
+  project: /data/project/frwelcome
+  randomizations: randomizations
+  reports: reports
+
+reports:
+  email_subject: "fr welcome"
+  from_addr: 'system.operations@civilservant.io'
+  to_addrs:
+    - max.klein@civilservant.io
+    - julia.kamin@civilservant.io
+    - eric.pennington@civilservant.io
