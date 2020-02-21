@@ -32,7 +32,7 @@ class WelcomeReport(EmailReport):
                         'end_date': self.now
                         }
         query_description = f'''Control check actions created in the last between {n_hours_ago} and {self.now}.'''
-        subject_stat_fn = lambda df: f'{len(df)} new users control-checked in last 24 hours'
+        subject_stat_fn = lambda df: f'{len(df)} control accidentally treated in last 24 hours'
         self.add_query(query_name=query_name,
                        query_sql=query_sql,
                        query_params=query_params,
