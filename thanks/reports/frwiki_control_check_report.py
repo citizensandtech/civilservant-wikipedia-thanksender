@@ -21,6 +21,7 @@ class WelcomeReport(EmailReport):
                             from core_experiment_actions
                             where experiment_id=%(experiment_id)s
                               and action_subject_type='page_text_check'
+                              and metadata_json->'$.action_complete' is FALSE
                             and created_dt <= %(end_date)s
                             and created_dt >= %(start_date)s
                             order by control_not_accidentally_treated desc;
@@ -31,7 +32,7 @@ class WelcomeReport(EmailReport):
                         'end_date': self.now
                         }
         query_description = f'''Control check actions created in the last between {n_hours_ago} and {self.now}.'''
-        subject_stat_fn = lambda df: f'{len(df)} new users surveyed in last 24 hours'
+        subject_stat_fn = lambda df: f'{len(df)} new users control-checked in last 24 hours'
         self.add_query(query_name=query_name,
                        query_sql=query_sql,
                        query_params=query_params,
