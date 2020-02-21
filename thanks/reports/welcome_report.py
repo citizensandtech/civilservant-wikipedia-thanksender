@@ -21,6 +21,7 @@ class WelcomeReport(EmailReport):
                                   json_unquote(metadata_json->'$.action_response.edit.title')), ' ', '_') as invite_link
                             from core_experiment_actions 
                             where experiment_id=%(experiment_id)s
+                                and action_subject_type ='talk_page_message'
                             and created_dt <= %(end_date)s
                             and created_dt >= %(start_date)s
                             '''
@@ -48,6 +49,7 @@ class WelcomeReport(EmailReport):
                               json_unquote(metadata_json->'$.errors[0]') as error
                             from core_experiment_actions 
                             where experiment_id=%(experiment_id)s
+                                and action_subject_type ='talk_page_message'                            
                                 and created_dt <= %(end_date)s
                                 and created_dt >= %(start_date)s
                                 and metadata_json->'$.action_complete' is FALSE; '''
@@ -67,7 +69,9 @@ class WelcomeReport(EmailReport):
         query_sql = '''select 
                         metadata_json->'$.action_complete' as 'completed?', 
                         count(*)
-                        from core_experiment_actions where experiment_id=%(experiment_id)s
+                        from core_experiment_actions 
+                        where experiment_id=%(experiment_id)s
+                        and action_subject_type ='talk_page_message'
                         group by metadata_json->'$.action_complete';'''
         query_params = {'experiment_id': self.experiment_id}
         query_description = f'''Total activity ever in the welcome experiment.'''
