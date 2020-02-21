@@ -29,14 +29,19 @@ def page_text_check(action, intervention_name, intervention_type, api_con, dry_r
     assert len(skip_words) > 0, 'There werent any skip words to check'
     auth = get_auth()
 
-    page_title = f"User_talk:{action.metadata_json['user_name']}"
-    page_text = get_page_text(page_title, mwapi_session=mwapi_session, auth=auth)
-
-
-    control_not__treated = True
+    control_not_treated = True
     reason = f'skip words {skip_words} not found in page'
+
+    try:
+        page_title = f"User_talk:{action.metadata_json['user_name']}"
+        page_text = get_page_text(page_title, mwapi_session=mwapi_session, auth=auth)
+    except KeyError as e:
+        if e.args[0] == 'revisions':
+            reason = 'No text on page at all'
+            return control_not_treated, reason
+
     for skip_word in skip_words:
         if skip_word in page_text:
             raise ValueError(f'skip word "{skip_word}" found in page')
 
-    return control_not__treated, reason
+    return control_not_treated, reason

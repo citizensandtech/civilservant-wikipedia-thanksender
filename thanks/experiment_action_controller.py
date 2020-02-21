@@ -90,6 +90,10 @@ class ExperimentActionController(object):
          3. matching self.lang if set
         :return: list of experimentActions
         """
+        # points on how this query may need to change
+        # 1. should experiment_id's be mentioned here?
+        # 2. BaseSurvey creator wants to store the intervention_type as in `action_type` not `action`,
+        #    at the moment its both, but we need to decide moving forwards.
         incomplete_actions_q = self.db_session.query(ExperimentAction) \
             .filter(and_(ExperimentAction.action_subject_id == self.intervention_name,
                          ExperimentAction.action == self.intervention_type,
@@ -103,7 +107,6 @@ class ExperimentActionController(object):
             .limit(self.batch_size) \
             .all()
 
-        # logging.debug(incomplete_actions_q)logging.info(f"Found {len(incomplete_actions)} thanks needing sending. lang is {self.lang}")
         return incomplete_actions
 
     def execute_actions(self, incomplete_actions):
