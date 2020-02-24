@@ -38,10 +38,12 @@ def post_creation_validators(db, config):
 def post_execution_validators(db, config):
     # 0. most 10 recent EAs are >50% action completed=TRUE
     experiment_id = _get_experiment_id(db, config['name'])
+    intervention_name = config['settings']['intervention_name']
     num_recent = 10
     frac_threshhold = 0.5
     recent_eas_q = db.query(ExperimentAction) \
         .filter(ExperimentAction.experiment_id == experiment_id) \
+        .filter(ExperimentAction.action_subject_id == intervention_name) \
         .order_by(desc(ExperimentAction.created_dt))
     recent_eas = recent_eas_q.limit(num_recent).all()
     recent_completed_eas = [ea for ea in recent_eas if 'action_complete' in ea.metadata_json]
@@ -56,6 +58,7 @@ def post_execution_validators(db, config):
     # 1. no more than 10 action_completed is NULL
     null_eas = db.query(ExperimentAction) \
         .filter(ExperimentAction.experiment_id == experiment_id) \
+        .filter(ExperimentAction.action_subject_id == intervention_name) \
         .filter(ExperimentAction.metadata_json['action_complete'] == None).all()
     if len(null_eas) > 10:
         logging.critical(f'Actions dont seem to be executing fast enough. There are still {len(null_eas)} Null Experiment Actions.')
