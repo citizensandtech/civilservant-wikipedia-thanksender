@@ -2,6 +2,7 @@ import datetime
 import math
 import random
 from datetime import timedelta
+from uuid import uuid4
 
 from civilservant.wikipedia.connections.api import get_mwapi_session, get_auth
 from civilservant.wikipedia.queries.sites import get_new_users, get_volunteer_signing_users
@@ -20,75 +21,62 @@ import logging
 
 from thanks.creators import BaseSurvey
 
+
 class ActionFollowUpSurvey(BaseSurvey):
+    def __init__(self, db, batch_size, lang, intervention_name, intervention_type, config):
+        super().__init__(db, batch_size, lang, intervention_name, intervention_type, config)
+        self.extra_metadata_fields = ['public_anonymous_id']
+
+    def _get_completed_interventions(self):
+        # join on what should be be the wikipedia user id en EA and ETs
+        intervention_on_clause = and_(ExperimentAction.action_object_id == ExperimentThing.thing_id,
+                                      ExperimentAction.metadata_json['lang'] ==
+                                      ExperimentThing.metadata_json['sync_object']['lang'])
+
+        intervention_completed_qualify = and_(ExperimentAction.experiment_id == self.experiment_id,
+                                              ExperimentAction.action_subject_id == self.survey_after_intervention,
+                                              ExperimentAction.action_subject_type == self.survey_after_intervention_type,
+                                              ExperimentAction.created_dt < self.action_latest_date,
+                                              ExperimentAction.metadata_json['action_complete'] == True)
+
+        completed_intervention_users_res = self.db.query(ExperimentAction, ExperimentThing) \
+            .join(ExperimentThing, intervention_on_clause) \
+            .filter(intervention_completed_qualify).all()
+
+        completed_intervention_users = self._dictify_completed_intervention_users(completed_intervention_users_res)
+
+        return completed_intervention_users
+
+    def _dictify_completed_intervention_users(self, completed_intervention_users_res):
+        completed_intervention_users = []
+        for ea, et in completed_intervention_users_res:
+            ciu = {'user_name':
+                       ea.metadata_json['user_name'], }
+            completed_intervention_users.append(ciu)
+        return completed_intervention_users
 
     def _get_unsent_survey_recipients(self):
         """
-        find which users need need to receive
-
-        ExperimentThing | ExpeimentAction | ExperimentActionSurvey
-             thing_id <--> action_obj_id
-                      metadata$user_name <--> action_object_id
-
+        find which users need need to receive surveys that haven't already
+        :rtype dict to map to ExperimentActions
         """
-        logging.info(f'Seeking thankees who received thanks before {self.action_latest_date}')
-
-        ExperimentActionSurvey = aliased(ExperimentAction)
+        logging.info(f'Seeking welcomed users that havent been surveyed before {self.action_latest_date}')
 
         # welcome
-        action_complete_onclause = and_(ExperimentAction.action_object_id == ExperimentThing.thing_id,
-                                        ExperimentAction.metadata_json['lang'] ==
-                                        ExperimentThing.metadata_json['sync_object']['lang'])
+        completed_intervention_users = self._get_completed_interventions()
 
-        # the we make sure the action_object_id is in the survey
-        survey_sent_onclause = and_(ExperimentActionSurvey.action_object_id == \
-                                    ExperimentAction.metadata_json['user_name'],
-                                    ExperimentActionSurvey.metadata_json['lang'] ==
-                                    ExperimentAction.metadata_json['lang'])
+        sent_survey_recipients = super()._get_sent_survey_recipient()
 
-        action_complete_qualify = and_(ExperimentAction.experiment_id == -15,
-                                       ExperimentAction.action == 'talk_page_message',
-                                       ExperimentAction.created_dt < self.action_latest_date,
-                                       ExperimentAction.metadata_json['action_complete'] == True)
+        sent_survey_user_names = [ea.metadata_json['user_name'] for ea in sent_survey_recipients]
 
-        relevant_surveys = and_(ExperimentActionSurvey.action_subject_id == self.intervention_name,
-                                ExperimentActionSurvey.action == self.intervention_type)
+        unsent_survey_recipients = [ciu for ciu in completed_intervention_users if
+                                    ciu['user_name'] not in sent_survey_user_names]
 
-        # the first join is to get users with their action complte
-        action_completed_p = self.db.query(ExperimentAction, ExperimentThing, ExperimentActionSurvey) \
-            .join(ExperimentThing, action_complete_onclause) \
-            .filter(action_complete_qualify)
-
-        # the second join is to get users who have been sent surveys
-        action_completed_q = action_completed_p \
-            .outerjoin(ExperimentActionSurvey, survey_sent_onclause) \
-            .filter(relevant_surveys)
-
-        if self.lang:
-            action_completed_q = action_completed_q.filter(ExperimentAction.metadata_json["lang"] == self.lang)
-
-        # only operate on the thankees that have a thank but not a survey
-        action_completed = action_completed_q.order_by(desc(ExperimentAction.created_dt)).all()
-        action_completed_needing_survey = [(expActionThank, expThing, expActionSurvey) for
-                                           (expActionThank, expThing, expActionSurvey)
-                                           in action_completed if not expActionSurvey]
-        action_completed_with_survey = [(expActionThank, expThing, expActionSurvey) for
-                                        (expActionThank, expThing, expActionSurvey)
-                                        in action_completed if expActionSurvey]
-        logging.info(
-            f'There are {len(action_completed_needing_survey)} experimentActions with thanks but without survey')
-        logging.info(f'There are {len(action_completed_with_survey)} experimentActions with thanks and with survey')
-        for th in action_completed_with_survey:
-            logging.debug(f'thanked_thankee_with_survey: {th[0].id, th[1].id, th[2].id}')
-
-    def dedupe(self):
-        # make sure the thankees are unique to avoid sending messages
-        thankees_needing_survey_experiment_action = []
-        seen_thankees = set()
-        return seen_thankees
+        for usr in unsent_survey_recipients:
+            usr['public_anonymous_id'] = str(uuid4())
+        return unsent_survey_recipients
 
 
-
-def fr_wiki_welcome_pilot_survey(db, batch_size, lang, intervention_name, intervention_type, config):
+def fr_wiki_welcome_survey(db, batch_size, lang, intervention_name, intervention_type, config):
     afus = ActionFollowUpSurvey(db, batch_size, lang, intervention_name, intervention_type, config)
     return afus.run()

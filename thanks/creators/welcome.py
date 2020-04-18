@@ -194,6 +194,8 @@ def _obfuscated_randomization_arm(db, experiment_id, randomization_arm):
 
 
 def _get_last_registration_of_last_onboarded_user(db, experiment_id):
+    # Note there is a small bug here in that Wikipedia users are linked to experiment_id. So we in the future
+    # should just look for Wikipedia Users related to this experiment_id.
     latest_wu = db.query(WikipediaUser).order_by(desc(WikipediaUser.user_registration)).limit(1).one_or_none()
     # logging.debug(f'Latest ET cr {latest_et.created_dt}, Latest WU reg {latest_wu.user_registration}')
     if not latest_wu:

@@ -43,6 +43,11 @@ class BaseSurvey():
         self.new_actions = []
         self.extra_metadata_fields = []
 
+        if 'survey_after_intervention' in self.config['survey_settings']:
+            self.survey_after_intervention = self.config['survey_settings']['survey_after_intervention']
+        if 'survey_after_intervention_type' in self.config['survey_settings']:
+            self.survey_after_intervention_type = self.config['survey_settings']['survey_after_intervention_type']
+
     def run(self):
         logging.info(f'Starting to run the survey creator at {self.now}')
 
