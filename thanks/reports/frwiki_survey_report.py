@@ -22,6 +22,7 @@ class WelcomeReport(EmailReport):
                             where experiment_id=%(experiment_id)s
                             and created_dt <= %(end_date)s
                             and created_dt >= %(start_date)s
+                            and action_subject_id = 'fr_wiki_welcome_survey'
                             order by survey_sent desc;
                             '''
         n_hours_ago = self.now - datetime.timedelta(hours=24)
