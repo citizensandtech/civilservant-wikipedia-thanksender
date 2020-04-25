@@ -22,6 +22,7 @@ class WelcomeReport(EmailReport):
                             from core_experiment_actions 
                             where experiment_id=%(experiment_id)s
                                 and action_subject_type ='talk_page_message'
+                                and action_subject_id = 'welcome'
                             and created_dt <= %(end_date)s
                             and created_dt >= %(start_date)s
                             '''
