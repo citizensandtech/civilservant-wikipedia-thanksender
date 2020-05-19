@@ -14,6 +14,7 @@ civilservant-api = {editable = true,git = "https://github.com/mitmedialab/civils
 civilservant-thankssender = {path = "."}
 pyyaml = "*"
 airbrake = "==1.3.3"
+coverage = "*"
 
 [requires]
 python_version = "3.7"

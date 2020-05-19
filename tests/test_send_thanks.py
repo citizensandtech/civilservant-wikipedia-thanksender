@@ -31,16 +31,16 @@ def db_session():
     session.close()
 
 def setup_data(db_session):
-    db_session.query(ExperimentAction).delete()
+    num_ea_deleted = db_session.query(ExperimentAction).delete()
+    num_oauth_deleted = db_session.query(OAuthUser).delete()
 
-    db_session.query(OAuthUser).delete()
     db_session.commit()
 
-    db_session.execute("""INSERT INTO civilservant_test.core_experiment_actions (id, created_dt, experiment_id, action_key_id, action, action_subject_type, action_subject_id, action_object_type, action_object_id, metadata_json, action_platform, removed_dt) VALUES (1, '2019-07-20 07:07:02', -1, '1', 'thank', 'ThingType.WIKIPEDIA_USER', null, 'ThingType.WIKIPEDIA_EDIT', '899651833', '{"lang":"en"}', null, null);""")
-    db_session.execute("""INSERT INTO civilservant_test.core_experiment_actions (id, created_dt, experiment_id, action_key_id, action, action_subject_type, action_subject_id, action_object_type, action_object_id, metadata_json, action_platform, removed_dt) VALUES (2, '2019-07-20 07:07:02', -1, '1', 'thank', 'ThingType.WIKIPEDIA_USER', null, 'ThingType.WIKIPEDIA_EDIT', '906577052', '{"lang":"en"}', null, null);""")
-    db_session.execute("""INSERT INTO civilservant_test.core_experiment_actions (id, created_dt, experiment_id, action_key_id, action, action_subject_type, action_subject_id, action_object_type, action_object_id, metadata_json, action_platform, removed_dt) VALUES (3, '2019-07-20 23:44:38', -1, '1', 'thank', 'ThingType.WIKIPEDIA_USER', null, 'ThingType.WIKIPEDIA_EDIT', '56662991', '{"lang":"en"}', null, null);""")
+    db_session.execute("""INSERT INTO gratitude_edit_sync.core_experiment_actions (id, created_dt, experiment_id, action_key_id, action, action_subject_type, action_subject_id, action_object_type, action_object_id, metadata_json, action_platform, removed_dt) VALUES (1, '2019-07-20 07:07:02', -1, '1', 'thank', 'ThingType.WIKIPEDIA_USER', null, 'ThingType.WIKIPEDIA_EDIT', '899651833', '{"lang":"en"}', null, null);""")
+    db_session.execute("""INSERT INTO gratitude_edit_sync.core_experiment_actions (id, created_dt, experiment_id, action_key_id, action, action_subject_type, action_subject_id, action_object_type, action_object_id, metadata_json, action_platform, removed_dt) VALUES (2, '2019-07-20 07:07:02', -1, '1', 'thank', 'ThingType.WIKIPEDIA_USER', null, 'ThingType.WIKIPEDIA_EDIT', '906577052', '{"lang":"en"}', null, null);""")
+    db_session.execute("""INSERT INTO gratitude_edit_sync.core_experiment_actions (id, created_dt, experiment_id, action_key_id, action, action_subject_type, action_subject_id, action_object_type, action_object_id, metadata_json, action_platform, removed_dt) VALUES (3, '2019-07-20 23:44:38', -1, '1', 'thank', 'ThingType.WIKIPEDIA_USER', null, 'ThingType.WIKIPEDIA_EDIT', '56662991', '{"lang":"en"}', null, null);""")
 
-    db_session.execute("""INSERT INTO civilservant_test.core_oauth_users (id, username, provider, created_dt, modified_dt, authoriations_json, access_token_json) VALUES (1, 'en:Maximilianklein', 'WIKIPEDIA', '2019-07-25 23:34:34', '2019-07-25 23:34:37', '{"0": "0"}', '{"access_token": {"key": "7729349ded39da410006ad7dd87e48f6", "secret": "217b890e5ea10286db6140bf068494ec526b2502"}}')""")
+    db_session.execute("""INSERT INTO gratitude_edit_sync.core_oauth_users (id, username, provider, created_dt, modified_dt, authoriations_json, access_token_json) VALUES (1, 'en:Maximilianklein', 'WIKIPEDIA', '2019-07-25 23:34:34', '2019-07-25 23:34:37', '{"0": "0"}', '{"access_token": {"key": "7729349ded39da410006ad7dd87e48f6", "secret": "217b890e5ea10286db6140bf068494ec526b2502"}}')""")
     db_session.commit()
 
 @patch('mwapi.Session.get')
